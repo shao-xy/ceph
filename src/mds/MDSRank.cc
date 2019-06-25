@@ -38,6 +38,8 @@
 
 #include "MDSRank.h"
 
+#define MDS_MONITOR_MIGRATOR
+
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix
@@ -648,8 +650,14 @@ void MDSRank::hit_export_target(mds_rank_t rank, double amount)
   counter.hit(amount);
   if (em.second) {
     dout(15) << "hit export target (new) is " << counter << dendl;
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "hit export target (new) is " << counter << dendl;
+    #endif
   } else {
     dout(15) << "hit export target is " << counter << dendl;
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "hit export target is " << counter << dendl;
+    #endif
   }
 }
 
@@ -1201,6 +1209,7 @@ void MDSRank::handle_message(const cref_t<Message> &m)
       break;
 
     case MSG_MDS_HEARTBEAT:
+    case MSG_MDS_IFBEAT:
       ALLOW_MESSAGES_FROM(CEPH_ENTITY_TYPE_MDS);
       balancer->proc_message(m);
       break;

@@ -110,6 +110,7 @@ void Inode::make_short_path(filepath& p)
     make_nosnap_relative_path(p);
   } else
     p = filepath(ino);
+  }
 }
 
 /*
@@ -120,8 +121,10 @@ void Inode::make_short_path(filepath& p)
 void Inode::make_nosnap_relative_path(filepath& p)
 {
   if (snapid == CEPH_NOSNAP) {
+    // lsubdout(client->cct, client, 0) << __func__ << " [1] " << ino << dendl;
     p = filepath(ino);
   } else if (snapdir_parent) {
+    // lsubdout(client->cct, client, 0) << __func__ << " [2] " << ino << dendl;
     snapdir_parent->make_nosnap_relative_path(p);
     string empty;
     p.push_dentry(empty);
@@ -131,6 +134,7 @@ void Inode::make_nosnap_relative_path(filepath& p)
     dn->dir->parent_inode->make_nosnap_relative_path(p);
     p.push_dentry(dn->name);
   } else {
+    // lsubdout(client->cct, client, 0) << __func__ << " [4] " << ino << dendl;
     p = filepath(ino);
   }
 }

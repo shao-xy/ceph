@@ -79,3 +79,15 @@ GTAGS
 # mypy cache
 .mypy_cache/
 
+# tags
+tags
+.tags
+.tags_sorted_by_file
+
+# GTags
+GTAGS
+GRATH
+GRTAGS
+
+# jams
+project-config.jam*

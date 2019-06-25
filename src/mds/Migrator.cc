@@ -38,6 +38,7 @@
 
 #include "messages/MClientCaps.h"
 
+#include "MigratorIPC.h"
 /*
  * this is what the dir->dir_auth values look like
  *
@@ -60,12 +61,23 @@
 
 #include "common/config.h"
 
-
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix
 #define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".mig " << __func__ << " "
 
+// -- cons --
+Migrator::Migrator(MDSRank *m, MDCache *c) : mds(m), cache(c) {
+  #ifdef MDS_MIGRATOR_IPC
+  pthread_t tid_ipc_migrate;
+  int res = pthread_create(&tid_ipc_migrate, NULL, ipc_migrator, this);
+  if(res < 0){
+    dout(0) << __func__ << " create ipc thread failed." << dendl;
+    exit(-1); 
+  }
+  pthread_detach(tid_ipc_migrate);
+  #endif
+}
 
 class MigratorContext : public MDSContext {
 protected:
@@ -701,6 +713,11 @@ void Migrator::maybe_do_queued_export()
 
   uint64_t max_total_size = max_export_size * 2;
 
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << dendl;
+  for(list<pair<dirfrag_t,mds_rank_t> >::iterator it = export_queue.begin(); it != export_queue.end();++it)
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) export_queue DIR " << *(mds->mdcache->get_dirfrag(it->first)) << " DEST " << it->second << dendl;
+  #endif
   while (!export_queue.empty() &&
 	 max_total_size > total_exporting_size &&
 	 max_total_size - total_exporting_size >=
@@ -715,6 +732,13 @@ void Migrator::maybe_do_queued_export()
     if (!dir->is_auth()) continue;
 
     dout(7) << "nicely exporting to mds." << dest << " " << *dir << dendl;
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) nicely exporting to mds." << dest << " " << *dir << dendl;
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) export_state.size " << export_state.size() << dendl;
+    export_record_start[dir] = ceph_clock_now();
+    dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir START on DIR " << *dir << " at " << export_record_start[dir] << dendl;
+    #endif
 
     export_dir(dir, dest);
   }
@@ -756,13 +780,25 @@ bool Migrator::export_try_grab_locks(CDir *dir, MutationRef& mut)
   cache->get_wouldbe_subtree_bounds(dir, wouldbe_bounds);
   for (auto& bound : wouldbe_bounds)
     bound_inodes.insert(bound->get_inode());
+    #ifdef MDS_MONITOR_MIGRATOR
+  for (auto& in : bound_inodes) {
+    lov.add_rdlock(&in->dirfragtreelock);
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) lock DIR " << *dir << " wouldbe_bounds_subtree inode " << in << dendl;
+  }
+    #else
   for (auto& in : bound_inodes)
     lov.add_rdlock(&in->dirfragtreelock);
+    #endif
 
   lov.add_rdlock(&diri->dirfragtreelock);
 
   CInode* in = diri;
+  string s;
   while (true) {
+    #ifdef MDS_MONITOR_MIGRATOR
+    in->make_path_string(s);
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) lock inode " << s << " by dir " << *dir << dendl;
+    #endif  
     lov.add_rdlock(&in->snaplock);
     CDentry* pdn = in->get_projected_parent_dn();
     if (!pdn)
@@ -786,8 +822,15 @@ bool Migrator::export_try_grab_locks(CDir *dir, MutationRef& mut)
  */
 void Migrator::export_dir(CDir *dir, mds_rank_t dest)
 {
+<<<<<<< HEAD
   ceph_assert(dir->is_auth());
   ceph_assert(dest != mds->get_nodeid());
+=======
+  dout(7) << "export_dir " << *dir << " to " << dest << dendl;
+  dout(0) << "EXPORT_MONITOR " << dir->get_path() << " " << mds->get_nodeid() << " " << dest << dendl;
+  assert(dir->is_auth());
+  assert(dest != mds->get_nodeid());
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
    
   CDir* parent = dir->inode->get_projected_parent_dir();
   if (!mds->is_stopping() && !dir->inode->is_exportable(dest) && dir->get_num_head_items() > 0) {
@@ -866,8 +909,13 @@ void Migrator::export_dir(CDir *dir, mds_rank_t dest)
   stat.peer = dest;
   stat.tid = mdr->reqid.tid;
   stat.mut = mdr;
+<<<<<<< HEAD
 
   mds->mdcache->dispatch_request(mdr);
+=======
+ 
+  return mds->mdcache->dispatch_request(mdr);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 }
 
 /*
@@ -1035,6 +1083,7 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
   }
   ceph_assert(it->second.state == EXPORT_LOCKING);
 
+<<<<<<< HEAD
   if (mdr->more()->slave_error || dir->is_frozen() || dir->is_freezing()) {
     dout(7) << "wouldblock|freezing|frozen, canceling export" << dendl;
     export_try_cancel(dir);
@@ -1042,6 +1091,12 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
   }
 
   mds_rank_t dest = it->second.peer;
+=======
+  mds_rank_t dest = it->second.peer;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) MDR " << *mdr << " export DIR " << *dir << " DEST " << dest << dendl;
+  #endif
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   if (!mds->is_export_target(dest)) {
     dout(7) << "dest is not yet an export target" << dendl;
     if (count > 3) {
@@ -1114,6 +1169,7 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
     mdr->locking_state |= MutationImpl::ALL_LOCKED;
   }
 
+<<<<<<< HEAD
   ceph_assert(g_conf()->mds_kill_export_at != 1);
 
   auto parent = it->second.parent;
@@ -1170,6 +1226,58 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
     MDRequestRef _mdr = mds->mdcache->request_start_internal(CEPH_MDS_OP_EXPORTDIR);
     _mdr->more()->export_dir = sub;
     _mdr->pin(sub);
+=======
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) START Lock DIR " << *dir << dendl;
+  #endif
+  // locks?
+  set<SimpleLock*> rdlocks;
+  set<SimpleLock*> xlocks;
+  set<SimpleLock*> wrlocks;
+  get_export_lock_set(dir, rdlocks);
+  // If auth MDS of the subtree root inode is neither the exporter MDS
+  // nor the importer MDS and it gathers subtree root's fragstat/neststat
+  // while the subtree is exporting. It's possible that the exporter MDS
+  // and the importer MDS both are auth MDS of the subtree root or both
+  // are not auth MDS of the subtree root at the time they receive the
+  // lock messages. So the auth MDS of the subtree root inode may get no
+  // or duplicated fragstat/neststat for the subtree root dirfrag.
+  wrlocks.insert(&dir->get_inode()->filelock);
+  wrlocks.insert(&dir->get_inode()->nestlock);
+  if (dir->get_inode()->is_auth()) {
+    dir->get_inode()->filelock.set_scatter_wanted();
+    dir->get_inode()->nestlock.set_scatter_wanted();
+  }
+
+  if (!mds->locker->acquire_locks(mdr, rdlocks, wrlocks, xlocks, NULL, NULL, true)) {
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) Fail Locking DIR " << *dir << dendl;
+    #endif
+    if (mdr->aborted)
+      export_try_cancel(dir);
+    return;
+  }
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) Successfully END Lock DIR " << *dir << dendl;
+  #endif
+  assert(g_conf->mds_kill_export_at != 1);
+  it->second.state = EXPORT_DISCOVERING;
+
+  // send ExportDirDiscover (ask target)
+  filepath path;
+  dir->inode->make_path(path);
+  MExportDirDiscover *discover = new MExportDirDiscover(dir->dirfrag(), path,
+							mds->get_nodeid(),
+							it->second.tid);
+  dout(7) << __func__ << " Youxu [1]send a ExportDirDiscover message!" << dendl;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) send a ExportDirDiscover message on path " << path << " DIR " << *dir << dendl;
+  rtt_discover_start[dir] = ceph_clock_now();
+  #endif
+  mds->send_message_mds(discover, dest);
+  assert(g_conf->mds_kill_export_at != 2);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
     ceph_assert(export_state.count(sub) == 0);
     auto& stat = export_state[sub];
@@ -1214,8 +1322,17 @@ void Migrator::handle_export_discover_ack(const cref_t<MExportDirDiscoverAck> &m
   
   dout(7) << "from " << m->get_source()
 	  << " on " << *dir << dendl;
+<<<<<<< HEAD
 
   mds->hit_export_target(dest, -1);
+=======
+  dout(7) << __func__ << " Youxu [4]get a ExportDirDiscoverACK message!" << dendl;
+  #ifdef MDS_MONITOR_MIGRATOR
+  rtt_discover_finish[dir] = ceph_clock_now();
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) Get a ExportDirDiscoverACK message on " << *dir << dendl;
+  #endif
+  mds->hit_export_target(now, dest, -1);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
   if (it == export_state.end() ||
@@ -1226,6 +1343,9 @@ void Migrator::handle_export_discover_ack(const cref_t<MExportDirDiscoverAck> &m
     ceph_assert(it->second.state == EXPORT_DISCOVERING);
 
     if (m->is_success()) {
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) release locks to avoid deadlock and finish request." << dendl;
+      #endif
       // release locks to avoid deadlock
       MDRequestRef mdr = static_cast<MDRequestImpl*>(it->second.mut.get());
       ceph_assert(mdr);
@@ -1241,6 +1361,15 @@ void Migrator::handle_export_discover_ack(const cref_t<MExportDirDiscoverAck> &m
       export_try_cancel(dir, false);
     }
   }
+<<<<<<< HEAD
+=======
+  
+  #ifdef MDS_MONITOR_MIGRATOR
+  export_record_end_discover[dir] = ceph_clock_now();
+  dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir END_DISCOVER on DIR " << *dir << " at " << export_record_end_discover[dir] << dendl;
+  #endif
+  m->put();  // done
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 }
 
 class C_M_ExportSessionsFlushed : public MigratorContext {
@@ -1330,7 +1459,14 @@ void Migrator::encode_export_prep_trace(bufferlist &final_bl, CDir *bound,
 
 void Migrator::export_frozen(CDir *dir, uint64_t tid)
 {
+<<<<<<< HEAD
   dout(7) << *dir << dendl;
+=======
+  dout(7) << "export_frozen on " << *dir << dendl;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) export this frozen on " << *dir << dendl;
+  #endif
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
   if (it == export_state.end() || it->second.tid != tid) {
@@ -1343,6 +1479,9 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
 
   it->second.mut = new MutationImpl();
 
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) Lock - grab all my locks and lock force." << dendl;
+  #endif
   // ok, try to grab all my locks.
   CInode *diri = dir->get_inode();
   if ((diri->is_auth() && diri->is_frozen()) ||
@@ -1355,14 +1494,39 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
 
   if (diri->is_auth())
     it->second.mut->auth_pin(diri);
+<<<<<<< HEAD
 
   cache->show_subtrees();
 
   // CDir::_freeze_tree() should have forced it into subtree.
   ceph_assert(dir->get_dir_auth() == mds_authority_t(mds->get_nodeid(), mds->get_nodeid()));
+=======
+  mds->locker->rdlock_take_set(rdlocks, it->second.mut);
+  mds->locker->wrlock_force(&diri->filelock, it->second.mut);
+  mds->locker->wrlock_force(&diri->nestlock, it->second.mut);
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) Lock force on " << diri->filelock << " on " << diri->filelock.get_parent() << dendl;
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) Lock force on " << diri->nestlock << " on " << diri->nestlock.get_parent() << dendl;
+  #endif
+  cache->show_subtrees();
+
+  // CDir::_freeze_tree() should have forced it into subtree.
+  assert(dir->get_dir_auth() == mds_authority_t(mds->get_nodeid(), mds->get_nodeid()));
+
+  set<client_t> export_client_set;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) check export size on " << *dir << dendl;
+  #endif
+  check_export_size(dir, it->second, export_client_set);
+
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   // note the bounds.
   set<CDir*> bounds;
   cache->get_subtree_bounds(dir, bounds);
+  #ifdef MDS_MONITOR_MIGRATOR
+  for(set<CDir*>::iterator bit = bounds.begin(); bit != bounds.end(); ++bit)
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) bound " << **bit << " on " << *dir << dendl;
+  #endif
 
   // generate prep message, log entry.
   auto prep = make_message<MExportDirPrep>(dir->dirfrag(), it->second.tid);
@@ -1371,6 +1535,9 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
   for (const auto &p : dir->get_replicas()) {
     if (p.first != it->second.peer) {
       dout(10) << "bystander mds." << p.first << dendl;
+       #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (4) bystander mds." << p.first << dendl;
+      #endif
       prep->add_bystander(p.first);
     }
   }
@@ -1397,8 +1564,73 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
     bound->state_set(CDir::STATE_EXPORTBOUND);
 
     dout(7) << "  export bound " << *bound << dendl;
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) export bound " << *bound << dendl;
+    #endif
     prep->add_bound( bound->dirfrag() );
+<<<<<<< HEAD
     
+=======
+
+    // trace to bound
+    bufferlist tracebl;
+    CDir *cur = bound;
+
+    char start = '-';
+    if (it->second.residual_dirs.count(bound)) {
+      start = 'f';
+      cache->replicate_dir(bound, it->second.peer, tracebl);
+      dout(7) << "  added " << *bound << dendl;
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) added " << *bound << dendl;
+      #endif
+    }
+
+    while (1) {
+      // don't repeat inodes
+      if (inodes_added.count(cur->inode->ino()))
+	break;
+      inodes_added.insert(cur->inode->ino());
+
+      // prepend dentry + inode
+      assert(cur->inode->is_auth());
+      bufferlist bl;
+      cache->replicate_dentry(cur->inode->parent, it->second.peer, bl);
+      dout(7) << "  added " << *cur->inode->parent << dendl;
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) added " << *cur->inode->parent << dendl;
+      #endif
+      cache->replicate_inode(cur->inode, it->second.peer, bl,
+			     mds->mdsmap->get_up_features());
+      dout(7) << "  added " << *cur->inode << dendl;
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) added " << *cur->inode << dendl;
+      #endif
+      bl.claim_append(tracebl);
+      tracebl.claim(bl);
+
+      cur = cur->get_parent_dir();
+
+      // don't repeat dirfrags
+      if (dirfrags_added.count(cur->dirfrag()) ||
+	  cur == dir) {
+	start = 'd';  // start with dentry
+	break;
+      }
+      dirfrags_added.insert(cur->dirfrag());
+
+      // prepend dir
+      cache->replicate_dir(cur, it->second.peer, bl);
+      dout(7) << "  added " << *cur << dendl;
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) added " << *cur << dendl;
+      #endif
+      bl.claim_append(tracebl);
+      tracebl.claim(bl);
+
+      start = 'f';  // start with dirfrag
+    }
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
     bufferlist final_bl;
     encode_export_prep_trace(final_bl, bound, dir, it->second, inodes_added, dirfrags_added);
     prep->add_trace(final_bl);
@@ -1406,6 +1638,11 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
 
   // send.
   it->second.state = EXPORT_PREPPING;
+  dout(7) << __func__ << " Youxu [5]send prepare message!" << dendl;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (6) send a prepare message!" << dendl;
+  rtt_prepare_start[dir] = ceph_clock_now();
+  #endif
   mds->send_message_mds(prep, it->second.peer);
   assert (g_conf()->mds_kill_export_at != 4);
 
@@ -1426,15 +1663,61 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
 
 void Migrator::get_export_client_set(CDir *dir, set<client_t>& client_set)
 {
+<<<<<<< HEAD
   deque<CDir*> dfs;
+=======
+  const unsigned frag_size = 800;
+  const unsigned inode_size = 1000;
+  const unsigned cap_size = 80;
+  const unsigned link_size = 10;
+  const unsigned null_size = 1;
+
+  uint64_t max_size = g_conf->get_val<uint64_t>("mds_max_export_size");
+  uint64_t approx_size = 0;
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) Dir " << *dir << " max_size " << max_size << dendl;
+  #endif
+
+  list<CDir*> dfs;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   dfs.push_back(dir);
   while (!dfs.empty()) {
     CDir *dir = dfs.front();
     dfs.pop_front();
+<<<<<<< HEAD
     for (auto& p : *dir) {
       CDentry *dn = p.second;
       if (!dn->get_linkage()->is_primary())
 	continue;
+=======
+
+    approx_size += frag_size;
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) size " << approx_size << " frag_size on " << *dir << dendl;
+    #endif
+    for (auto &p : *dir) {
+      CDentry *dn = p.second;
+      if (dn->get_linkage()->is_null()) {
+	approx_size += null_size;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) size " << approx_size << " null_size on " << *dn << dendl;
+  #endif
+	continue;
+      }
+      if (dn->get_linkage()->is_remote()) {
+	approx_size += link_size;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) size " << approx_size << " link_size on " << *dn << dendl;
+  #endif
+	continue;
+      }
+
+      approx_size += inode_size;
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) size " << approx_size << " inode_size on " << *(dn->get_linkage()->get_inode()) << dendl;
+     #endif
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
       CInode *in = dn->get_linkage()->get_inode();
       if (in->is_dir()) {
 	// directory?
@@ -1447,10 +1730,46 @@ void Migrator::get_export_client_set(CDir *dir, set<client_t>& client_set)
 	  }
 	}
       }
+<<<<<<< HEAD
       for (auto& q : in->get_client_caps()) {
 	client_set.insert(q.first);
       }
     }
+=======
+      for (map<client_t, Capability*>::iterator q = in->client_caps.begin();
+	   q != in->client_caps.end();
+	   ++q) {
+	approx_size += cap_size;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) size " << approx_size << " cap_size on " << *in << dendl;
+  #endif
+	client_set.insert(q->first);
+      }
+    }
+
+    if (approx_size >= max_size)
+      break;
+  }
+
+  while (!dfs.empty()) {
+    CDir *dir = dfs.front();
+    dfs.pop_front();
+
+    dout(7) << "check_export_size: creating bound " << *dir << dendl;
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) creating bound " << *dir << dendl;
+    #endif
+    assert(dir->is_auth());
+    dir->state_set(CDir::STATE_EXPORTBOUND);
+    dir->get(CDir::PIN_EXPORTBOUND);
+
+    mds->mdcache->adjust_subtree_auth(dir, mds->get_nodeid());
+    // Another choice here is finishing all WAIT_UNFREEZE contexts and keeping
+    // the newly created subtree unfreeze.
+    dir->_freeze_tree();
+
+    stat.residual_dirs.insert(dir);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   }
 }
 
@@ -1467,7 +1786,17 @@ void Migrator::handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m)
   mds_rank_t dest(m->get_source().num());
   ceph_assert(dir);
 
+<<<<<<< HEAD
   dout(7) << *dir << dendl;
+=======
+  dout(7) << "export_prep_ack " << *dir << dendl;
+  dout(7) << __func__ << " Youxu [8]get a prepare ack message!" << dendl;
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  rtt_prepare_finish[dir] = ceph_clock_now();
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) start handle export prep ack: dir: "<< *dir << dendl;
+  #endif 
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   mds->hit_export_target(dest, -1);
 
@@ -1481,6 +1810,10 @@ void Migrator::handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m)
   }
   ceph_assert(it->second.state == EXPORT_PREPPING);
 
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) check over, state is EXPORT_PREPPING " << dendl;
+  #endif 
+
   if (!m->is_success()) {
     dout(7) << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
     export_try_cancel(dir, false);
@@ -1492,7 +1825,19 @@ void Migrator::handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m)
   set<CDir*> bounds;
   cache->get_subtree_bounds(dir, bounds);
 
+<<<<<<< HEAD
   ceph_assert(it->second.warning_ack_waiting.empty() ||
+=======
+  #ifdef MDS_MONITOR_MIGRATOR
+  if(bounds.empty()){
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is empty " << dendl;
+  }else{
+          dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is NOT empty " << dendl;
+  }
+  #endif 
+
+  assert(it->second.warning_ack_waiting.empty() ||
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
          (it->second.warning_ack_waiting.size() == 1 &&
 	  it->second.warning_ack_waiting.count(MDS_RANK_NONE) > 0));
   ceph_assert(it->second.notify_ack_waiting.empty());
@@ -1504,6 +1849,7 @@ void Migrator::handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m)
       continue;  // only if active
     it->second.warning_ack_waiting.insert(p.first);
     it->second.notify_ack_waiting.insert(p.first);  // we'll eventually get a notifyack, too!
+<<<<<<< HEAD
 
     auto notify = make_message<MExportDirNotify>(dir->dirfrag(), it->second.tid, true,
         mds_authority_t(mds->get_nodeid(),CDIR_AUTH_UNKNOWN),
@@ -1511,16 +1857,57 @@ void Migrator::handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m)
     for (auto &cdir : bounds) {
       notify->get_bounds().push_back(cdir->dirfrag());
     }
+=======
+    MExportDirNotify *notify = new MExportDirNotify(dir->dirfrag(), it->second.tid, true,
+						    mds_authority_t(mds->get_nodeid(),CDIR_AUTH_UNKNOWN),
+						    mds_authority_t(mds->get_nodeid(),it->second.peer));
+
+    #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) complete notifyack " << dendl;
+    #endif
+
+    for (set<CDir*>::iterator q = bounds.begin(); q != bounds.end(); ++q)
+    {
+      notify->get_bounds().push_back((*q)->dirfrag());
+
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (4) elem in bounds now is: "<< *q << dendl;
+      //but the bounds is always empty?
+      #endif 
+    }
+    dout(7) << __func__ << " Youxu [9]send notify message!" << dendl;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
     mds->send_message_mds(notify, p.first);
     
   }
 
   it->second.state = EXPORT_WARNING;
 
+<<<<<<< HEAD
   ceph_assert(g_conf()->mds_kill_export_at != 6);
+=======
+  assert(g_conf->mds_kill_export_at != 6);
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  export_record_end_prepare[dir] = ceph_clock_now();
+  dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir END_PREPARE on DIR " << *dir << " at " << export_record_end_prepare[dir] << dendl;
+  #endif
+
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   // nobody to warn?
-  if (it->second.warning_ack_waiting.empty())
+  if (it->second.warning_ack_waiting.empty()){
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) export go " << dendl;
+    #endif 
+    dout(7) << __func__ << " Youxu export_go!" << dendl;
     export_go(dir);  // start export.
+<<<<<<< HEAD
+=======
+  }
+    
+  // done.
+  m->put();
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 }
 
 
@@ -1544,13 +1931,26 @@ void Migrator::export_go(CDir *dir)
   ceph_assert(it != export_state.end());
   dout(7) << *dir << " to " << it->second.peer << dendl;
 
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) Start export go " << dendl;
+  #endif 
+
   // first sync log to flush out e.g. any cap imports
   mds->mdlog->wait_for_safe(new C_M_ExportGo(this, dir, it->second.tid));
   mds->mdlog->flush();
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) End export go " << dendl;
+  #endif
 }
 
 void Migrator::export_go_synced(CDir *dir, uint64_t tid)
 {
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) Start export_go_synced " << dendl;
+  #endif 
+
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
   if (it == export_state.end() ||
       it->second.state == EXPORT_CANCELLING ||
@@ -1562,7 +1962,16 @@ void Migrator::export_go_synced(CDir *dir, uint64_t tid)
   ceph_assert(it->second.state == EXPORT_WARNING);
   mds_rank_t dest = it->second.peer;
 
+<<<<<<< HEAD
   dout(7) << *dir << " to " << dest << dendl;
+=======
+  dout(7) << "export_go_synced " << *dir << " to " << dest << dendl;
+  //dout(7) << __func__ << " Youxu [11]send migrated directory!" << dendl;
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "(2) export_go_synced " << *dir << " to " << dest << dendl;
+  #endif 
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   cache->show_subtrees();
   
@@ -1577,6 +1986,11 @@ void Migrator::export_go_synced(CDir *dir, uint64_t tid)
   // take away the popularity we're sending.
   mds->balancer->subtract_export(dir);
   
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "(3) subtract exported dir " << *dir << dendl;
+    utime_t encode_start = ceph_clock_now();
+  #endif 
+
   // fill export message with cache data
   auto req = make_message<MExportDir>(dir->dirfrag(), it->second.tid);
   map<client_t,entity_inst_t> exported_client_map;
@@ -1588,25 +2002,55 @@ void Migrator::export_go_synced(CDir *dir, uint64_t tid)
   encode(exported_client_map, req->client_map, mds->mdsmap->get_up_features());
   encode(exported_client_metadata_map, req->client_map);
 
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "(4) encode exported message, export inodes num: " << num_exported_inodes << " dir : "<< *dir << dendl;
+  #endif 
+
   // add bounds to message
   set<CDir*> bounds;
   cache->get_subtree_bounds(dir, bounds);
+  #ifdef MDS_MONITOR_MIGRATOR
+  if(bounds.empty()){
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is empty " << dendl;
+  }else{
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is NOT empty " << dendl;
+  }
+  #endif 
   for (set<CDir*>::iterator p = bounds.begin();
        p != bounds.end();
        ++p)
     req->add_export((*p)->dirfrag());
 
+  #ifdef MDS_MONITOR_MIGRATOR
+  utime_t encode_end = ceph_clock_now();
+  export_breakdown_endode[dir] = (encode_end - encode_start);
+  rtt_export_start[dir] = ceph_clock_now();
+  #endif
+
   // send
+  dout(7) << __func__ << " Youxu [13]send exported_dir_inodes to dest!" << dendl;
   mds->send_message_mds(req, dest);
   ceph_assert(g_conf()->mds_kill_export_at != 8);
 
+<<<<<<< HEAD
   mds->hit_export_target(dest, num_exported_inodes+1);
+=======
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "(5) send exported inode message to " << dest << dendl;
+  #endif 
+
+  mds->hit_export_target(now, dest, num_exported_inodes+1);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   // stats
   if (mds->logger) mds->logger->inc(l_mds_exported);
   if (mds->logger) mds->logger->inc(l_mds_exported_inodes, num_exported_inodes);
 
   cache->show_subtrees();
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (6) End export_go_synced " << dendl;
+  #endif 
 }
 
 
@@ -1892,13 +2336,30 @@ public:
  */
 void Migrator::handle_export_ack(const cref_t<MExportDirAck> &m)
 {
+  
+
   CDir *dir = cache->get_dirfrag(m->get_dirfrag());
   mds_rank_t dest(m->get_source().num());
   ceph_assert(dir);
   ceph_assert(dir->is_frozen_tree_root());  // i'm exporting!
 
+  #ifdef MDS_MONITOR_MIGRATOR
+  rtt_export_finish[dir] = ceph_clock_now();
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) START handle export dir ack, dir : " << *dir << dendl;
+  #endif 
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  export_record_end_export[dir] = ceph_clock_now();
+  dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir END_EXPORT on DIR " << *dir << " at " << export_record_end_export[dir] << dendl;
+  #endif
+
   // yay!
+<<<<<<< HEAD
   dout(7) << *dir << dendl;
+=======
+  dout(7) << "handle_export_ack " << *dir << dendl;
+  dout(7) << __func__ << " Youxu [16]get a export dir ack message!" << dendl;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   mds->hit_export_target(dest, -1);
 
@@ -1914,6 +2375,12 @@ void Migrator::handle_export_ack(const cref_t<MExportDirAck> &m)
   assert (g_conf()->mds_kill_export_at != 9);
   set<CDir*> bounds;
   cache->get_subtree_bounds(dir, bounds);
+
+  if(bounds.empty()){
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is empty " << dendl;
+  }else{
+          dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is NOT empty " << dendl;
+  }
 
   // log completion. 
   //  include export bounds, to ensure they're in the journal.
@@ -1938,7 +2405,17 @@ void Migrator::handle_export_ack(const cref_t<MExportDirAck> &m)
   // log export completion, then finish (unfreeze, trigger finish context, etc.)
   mds->mdlog->submit_entry(le, new C_MDS_ExportFinishLogged(this, dir));
   mds->mdlog->flush();
+<<<<<<< HEAD
   assert (g_conf()->mds_kill_export_at != 10);
+=======
+  assert (g_conf->mds_kill_export_at != 10);
+  
+  m->put();
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) END handle export dir ack " << dendl;
+  #endif 
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 }
 
 void Migrator::export_notify_abort(CDir *dir, export_state_t& stat, set<CDir*>& bounds)
@@ -2051,7 +2528,16 @@ void Migrator::export_reverse(CDir *dir, export_state_t& stat)
  */
 void Migrator::export_logged_finish(CDir *dir)
 {
+<<<<<<< HEAD
   dout(7) << *dir << dendl;
+=======
+  dout(7) << "export_logged_finish " << *dir << dendl;
+  dout(7) << __func__ << " Youxu [17] log and finish." << dendl;
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) START export_logged_finish " << dendl;
+  #endif 
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   export_state_t& stat = export_state[dir];
 
@@ -2070,6 +2556,11 @@ void Migrator::export_logged_finish(CDir *dir)
       notify->get_bounds().push_back((*i)->dirfrag());
     
     mds->send_message_mds(notify, *p);
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) send notify message to mds: "<< *p << dendl;
+    #endif
+
   }
 
   // wait for notifyacks
@@ -2079,11 +2570,20 @@ void Migrator::export_logged_finish(CDir *dir)
   // no notifies to wait for?
   if (stat.notify_ack_waiting.empty()) {
     export_finish(dir);  // skip notify/notify_ack stage.
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) no notify wait for ack, go to export_finish "<< dendl;
+    #endif
   } else {
     // notify peer to send cap import messages to clients
     if (!mds->is_cluster_degraded() ||
 	mds->mdsmap->is_clientreplay_or_active_or_stopping(stat.peer)) {
+<<<<<<< HEAD
       mds->send_message_mds(make_message<MExportDirFinish>(dir->dirfrag(), false, stat.tid), stat.peer);
+=======
+      dout(7) << __func__ << " Youxu [18]send a finish message!" << dendl;
+      mds->send_message_mds(new MExportDirFinish(dir->dirfrag(), false, stat.tid), stat.peer);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
     } else {
       dout(7) << "not sending MExportDirFinish, dest has failed" << dendl;
     }
@@ -2105,7 +2605,12 @@ void Migrator::handle_export_notify_ack(const cref_t<MExportDirNotifyAck> &m)
   ceph_assert(dir);
   mds_rank_t from = mds_rank_t(m->get_source().num());
 
+<<<<<<< HEAD
   mds->hit_export_target(dest, -1);
+=======
+  dout(7) << __func__ << " Youxu [12]get a notify ack!" << dendl;
+  mds->hit_export_target(now, dest, -1);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   auto export_state_entry = export_state.find(dir);
   if (export_state_entry != export_state.end()) {
@@ -2155,7 +2660,12 @@ void Migrator::export_finish(CDir *dir)
 {
   dout(3) << *dir << dendl;
 
+<<<<<<< HEAD
   assert (g_conf()->mds_kill_export_at != 12);
+=======
+  dout(7) << __func__ << " Youxu [18]export finish on exporter side!" << dendl;
+  assert (g_conf->mds_kill_export_at != 12);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
   if (it == export_state.end()) {
     dout(7) << "target must have failed, not sending final commit message.  export succeeded anyway." << dendl;
@@ -2237,6 +2747,57 @@ void Migrator::export_finish(CDir *dir)
     mds->locker->drop_locks(mut.get());
     mut->cleanup();
   }
+<<<<<<< HEAD
+=======
+  
+  #ifdef MDS_MONITOR_MIGRATOR
+  export_record_finish[dir] = ceph_clock_now();
+  if(export_record_start.count(dir) && export_record_end_discover.count(dir) && export_record_end_prepare.count(dir) && export_record_end_export.count(dir)){
+    utime_t lat_discover = export_record_end_discover[dir] - export_record_start[dir];
+    utime_t lat_prepare = export_record_end_prepare[dir] - export_record_end_discover[dir];
+    utime_t lat_export = export_record_end_export[dir] - export_record_end_prepare[dir];
+    utime_t lat_last = export_record_finish[dir] - export_record_end_export[dir];
+    utime_t lat_migrate = export_record_finish[dir] - export_record_start[dir];
+    utime_t rtt, rtt_discover, rtt_prepare, rtt_export;
+    if(rtt_discover_start.count(dir) && rtt_discover_finish.count(dir) && rtt_prepare_start.count(dir) && rtt_prepare_finish.count(dir) && rtt_export_start.count(dir) && rtt_export_finish.count(dir)){
+      rtt_discover = rtt_discover_finish[dir] - rtt_discover_start[dir];
+      rtt_prepare = rtt_prepare_finish[dir] - rtt_prepare_start[dir];
+      rtt_export = rtt_export_finish[dir] - rtt_export_start[dir];
+      rtt =  rtt_discover + rtt_prepare + rtt_export;
+    }
+    
+    if(export_breakdown_endode.count(dir))
+      dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir END_ALL_FINISH on DIR " << *dir << " at " << export_record_finish[dir] 
+        << " number_dentries " << num_dentries
+        << " latency_discover " <<  lat_discover
+        << " latency_prepare " << lat_prepare
+        << " latency_export " << lat_export
+        << " latency_last " << lat_last
+        << " latency_migrate " << lat_migrate << " RTT " << rtt 
+        << " rtt_discover " << rtt_discover
+        << " rtt_prepare " << rtt_prepare
+        << " rtt_export " << rtt_export
+        << " latency_encode " << export_breakdown_endode[dir] << dendl;
+    else
+      dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir END_ALL_FINISH on DIR " << *dir << " at " << export_record_finish[dir] 
+        << " number_dentries " << num_dentries
+        << " latency_discover " <<  lat_discover
+        << " latency_prepare " << lat_prepare
+        << " latency_export " << lat_export
+        << " latency_last " << lat_last
+        << " latency_migrate " << lat_migrate << " RTT " << rtt 
+        << " rtt_discover " << rtt_discover
+        << " rtt_prepare " << rtt_prepare
+        << " rtt_export " << rtt_export
+        << dendl;
+  }
+  else
+    dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " export_record_start does not contains this dir information, DIR " << *dir << dendl;
+  #endif
+  maybe_do_queued_export();
+}
+
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   if (parent)
     child_export_finish(parent, true);
@@ -2275,10 +2836,19 @@ void Migrator::handle_export_discover(const cref_t<MExportDirDiscover> &m, bool 
   mds_rank_t from = m->get_source_mds();
   ceph_assert(from != mds->get_nodeid());
 
+<<<<<<< HEAD
   dout(7) << m->get_path() << dendl;
 
+=======
+  dout(7) << "handle_export_discover on " << m->get_path() << dendl;
+  dout(7) << __func__ << " Youxu [2]get a ExportDirDiscover message!" << dendl;
+   
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   // note import state
   dirfrag_t df = m->get_dirfrag();
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) Get a ExportDirDiscover message for " << df << dendl;
+  #endif
 
   if (!mds->is_active()) {
     dout(7) << " not active, send NACK " << dendl;
@@ -2319,13 +2889,21 @@ void Migrator::handle_export_discover(const cref_t<MExportDirDiscover> &m, bool 
   // do we have it?
   CInode *in = cache->get_inode(m->get_dirfrag().ino);
   if (!in) {
+   
     // must discover it!
     filepath fpath(m->get_path());
     vector<CDentry*> trace;
     MDRequestRef null_ref;
+<<<<<<< HEAD
     int r = cache->path_traverse(null_ref, cf, fpath,
 				 MDS_TRAVERSE_DISCOVER | MDS_TRAVERSE_PATH_LOCKED,
 				 &trace);
+=======
+    int r = cache->path_traverse(null_ref, m, NULL, fpath, &trace, NULL, MDS_TRAVERSE_DISCOVER);
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) discover Inode using path_traverse for path " << fpath << dendl;
+    #endif 
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
     if (r > 0) return;
     if (r < 0) {
       dout(7) << "failed to discover or not dir " << m->get_path() << ", NAK" << dendl;
@@ -2334,6 +2912,10 @@ void Migrator::handle_export_discover(const cref_t<MExportDirDiscover> &m, bool 
 
     ceph_abort(); // this shouldn't happen; the get_inode above would have succeeded.
   }
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) discovered have " << df << " inode " << *in << dendl;
+  #endif 
 
   // yay
   dout(7) << "have " << df << " inode " << *in << dendl;
@@ -2346,8 +2928,18 @@ void Migrator::handle_export_discover(const cref_t<MExportDirDiscover> &m, bool 
 
   // reply
   dout(7) << " sending export_discover_ack on " << *in << dendl;
+<<<<<<< HEAD
   mds->send_message_mds(make_message<MExportDirDiscoverAck>(df, m->get_tid()), p_state->peer);
   assert (g_conf()->mds_kill_import_at != 2);
+=======
+  dout(7) << __func__ << " Youxu [3]send a ExportDirDiscoverACK message!" << dendl;
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) Send a ExportDirDiscoverACK message." << dendl;
+  #endif
+  mds->send_message_mds(new MExportDirDiscoverAck(df, m->get_tid()), p_state->peer);
+  m->put();
+  assert (g_conf->mds_kill_import_at != 2);  
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 }
 
 void Migrator::import_reverse_discovering(dirfrag_t df)
@@ -2468,6 +3060,12 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
   mds_rank_t oldauth = mds_rank_t(m->get_source().num());
   ceph_assert(oldauth != mds->get_nodeid());
 
+  dout(7) << __func__ << " Youxu [6]get a prepare message!" << dendl;
+
+  //#ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) oldauth: " << oldauth << dendl;
+  //#endif 
+
   CDir *dir;
   CInode *diri;
   MDSContext::vec finished;
@@ -2479,15 +3077,38 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
     ceph_assert(it->second.state == IMPORT_DISCOVERED);
     ceph_assert(it->second.peer == oldauth);
     diri = cache->get_inode(m->get_dirfrag().ino);
+<<<<<<< HEAD
     ceph_assert(diri);
     auto p = m->basedir.cbegin();
     cache->decode_replica_dir(dir, p, diri, oldauth, finished);
     dout(7) << "on " << *dir << " (first pass)" << dendl;
+=======
+
+    assert(diri);
+    bufferlist::iterator p = m->basedir.begin();
+    dir = cache->add_replica_dir(p, diri, oldauth, finished);
+    
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) assimilate root dirinode(first): " << *diri << " dir "<< *dir << dendl;
+    #endif 
+
+    dout(7) << "handle_export_prep on " << *dir << " (first pass)" << dendl;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   } else {
     if (it == import_state.end() ||
 	it->second.peer != oldauth ||
 	it->second.tid != m->get_tid()) {
+<<<<<<< HEAD
       dout(7) << "obsolete message, dropping" << dendl;
+=======
+      dout(7) << "handle_export_prep obsolete message, dropping" << dendl;
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << "MDS_MONITOR_MIGRATOR"<< __func__ << "------obsolete message------" << dendl;
+    #endif 
+
+      m->put();
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
       return;
     }
     ceph_assert(it->second.state == IMPORT_PREPPING);
@@ -2497,6 +3118,11 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
     ceph_assert(dir);
     dout(7) << "on " << *dir << " (subsequent pass)" << dendl;
     diri = dir->get_inode();
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) dirinode(not first): " << *diri << " dir "<< *dir << dendl;
+    #endif 
+
   }
   ceph_assert(dir->is_auth() == false);
 
@@ -2504,13 +3130,35 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
 
   // build import bound map
   map<inodeno_t, fragset_t> import_bound_fragset;
+<<<<<<< HEAD
   for (const auto &bound : m->get_bounds()) {
     dout(10) << " bound " << bound << dendl;
     import_bound_fragset[bound.ino].insert_raw(bound.frag);
+=======
+  if(m->get_bounds().empty()){
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is empty " << dendl;
+  }else{
+          dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " bounds is NOT empty , size: "<< m->get_bounds().size() << dendl;
+  }
+  for (list<dirfrag_t>::iterator p = m->get_bounds().begin();
+       p != m->get_bounds().end();
+       ++p) {
+    dout(10) << " bound " << *p << dendl;
+    import_bound_fragset[p->ino].insert(p->frag);
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) bound set insert: " << p->ino << dendl;
+    #endif 
+
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   }
   // assimilate contents?
   if (!did_assim) {
     dout(7) << "doing assim on " << *dir << dendl;
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) set the assim tag " << dendl;
+    #endif 
 
     // change import state
     it->second.state = IMPORT_PREPPING;
@@ -2526,11 +3174,58 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
     dir->get(CDir::PIN_IMPORTING);  
     dir->state_set(CDir::STATE_IMPORTING);
 
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (4) set import pin" << dendl;
+    #endif 
+
     // assimilate traces to exports
     // each trace is: df ('-' | ('f' dir | 'd') dentry inode (dir dentry inode)*)
+<<<<<<< HEAD
     for (const auto &bl : m->traces) {
       auto blp = bl.cbegin();
       decode_export_prep_trace(blp, oldauth, finished);
+=======
+    for (list<bufferlist>::iterator p = m->traces.begin();
+	 p != m->traces.end();
+	 ++p) {
+      bufferlist::iterator q = p->begin();
+      dirfrag_t df;
+      ::decode(df, q);
+      char start;
+      ::decode(start, q);
+      dout(10) << " trace from " << df << " start " << start << " len " << p->length() << dendl;
+
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) trace "<< df << " start " << start << dendl;
+    #endif 
+
+      CDir *cur = 0;
+      if (start == 'd') {
+	cur = cache->get_dirfrag(df);
+	assert(cur);
+	dout(10) << "  had " << *cur << dendl;
+      } else if (start == 'f') {
+	CInode *in = cache->get_inode(df.ino);
+	assert(in);
+	dout(10) << "  had " << *in << dendl;
+	cur = cache->add_replica_dir(q, in, oldauth, finished);
+ 	dout(10) << "  added " << *cur << dendl;
+      } else if (start == '-') {
+	// nothing
+      } else
+	assert(0 == "unrecognized start char");
+
+      while (!q.end()) {
+	CDentry *dn = cache->add_replica_dentry(q, cur, finished);
+	dout(10) << "  added " << *dn << dendl;
+	CInode *in = cache->add_replica_inode(q, dn, finished);
+	dout(10) << "  added " << *in << dendl;
+	if (q.end())
+	  break;
+	cur = cache->add_replica_dir(q, in, oldauth, finished);
+	dout(10) << "  added " << *cur << dendl;
+      }
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
     }
 
     // make bound sticky
@@ -2564,6 +3259,10 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
       CInode *in = cache->get_inode(p->first);
       ceph_assert(in);
 
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) open all bounds, inode "<< *in << dendl;
+      #endif 
+
       // map fragset into a frag_t list, based on the inode fragtree
       frag_vec_t leaves;
       for (const auto& frag : p->second) {
@@ -2587,6 +3286,11 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
 	  dout(7) << "  already pinned import bound " << *bound << dendl;
 	}
 	import_bounds.insert(bound);
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) import bounds insert: "<< *bound << dendl;
+  #endif 
+
       }
     }
 
@@ -2599,6 +3303,10 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
 
     dout(7) << " all ready, noting auth and freezing import region" << dendl;
 
+    #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (5) all ready " << dendl;
+    #endif 
+
     if (!mds->mdcache->is_readonly() &&
 	// for pinning scatter gather. loner has a higher chance to get wrlock
 	diri->filelock.can_wrlock(diri->get_loner()) &&
@@ -2610,6 +3318,13 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
 
       // note that i am an ambiguous auth for this subtree.
       // specify bounds, since the exporter explicitly defines the region.
+
+      if(import_bounds.empty()){
+        dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " we will adjust the import_bounds, and it is empty " << dendl;
+      }else{
+        dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << "  we will adjust the import_bounds, and it is NOT empty "<< dendl;
+      }
+
       cache->adjust_bounded_subtree_auth(dir, import_bounds,
 					 pair<int,int>(oldauth, mds->get_nodeid()));
       cache->verify_subtree_bounds(dir, import_bounds);
@@ -2617,6 +3332,11 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
       dir->_freeze_tree();
       // note new state
       it->second.state = IMPORT_PREPPED;
+
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (6) acquire all needed locks, dir "<< *dir << dendl;
+      #endif 
+
     } else {
       dout(7) << " couldn't acquire all needed locks, failing. " << *dir << dendl;
       success = false;
@@ -2631,7 +3351,12 @@ void Migrator::handle_export_prep(const cref_t<MExportDirPrep> &m, bool did_assi
 
   // ok!
   dout(7) << " sending export_prep_ack on " << *dir << dendl;
+<<<<<<< HEAD
   mds->send_message(make_message<MExportDirPrepAck>(dir->dirfrag(), success, m->get_tid()), m->get_connection());
+=======
+  dout(7) << __func__ << " Youxu [7]send a prepare ACk message!" << dendl;
+  mds->send_message(new MExportDirPrepAck(dir->dirfrag(), success, m->get_tid()), m->get_connection());
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   ceph_assert(g_conf()->mds_kill_import_at != 4);
 }
@@ -2663,6 +3388,7 @@ void Migrator::handle_export_dir(const cref_t<MExportDir> &m)
   ceph_assert(dir);
 
   mds_rank_t oldauth = mds_rank_t(m->get_source().num());
+<<<<<<< HEAD
   dout(7) << "importing " << *dir << " from " << oldauth << dendl;
 
   ceph_assert(!dir->is_auth());
@@ -2673,6 +3399,23 @@ void Migrator::handle_export_dir(const cref_t<MExportDir> &m)
   ceph_assert(it->second.state == IMPORT_PREPPED);
   ceph_assert(it->second.tid == m->get_tid());
   ceph_assert(it->second.peer == oldauth);
+=======
+  dout(7) << "handle_export_dir importing " << *dir << " from " << oldauth << dendl;
+  dout(7) << __func__ << " Youxu [14]get migrated directory!" << dendl;
+  assert(!dir->is_auth());
+  
+  map<dirfrag_t,import_state_t>::iterator it = import_state.find(m->dirfrag);
+  assert(it != import_state.end());
+  assert(it->second.state == IMPORT_PREPPED);
+  assert(it->second.tid == m->get_tid());
+  assert(it->second.peer == oldauth);
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (1) start handle export dir : " << *dir << dendl;
+  #endif 
+
+  utime_t now = ceph_clock_now();
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
 
   if (!dir->get_inode()->dirfragtree.is_leaf(dir->get_frag()))
     dir->get_inode()->dirfragtree.force_to_leaf(g_ceph_context, dir->get_frag());
@@ -2692,6 +3435,7 @@ void Migrator::handle_export_dir(const cref_t<MExportDir> &m)
 
   // new client sessions, open these after we journal
   // include imported sessions in EImportStart
+<<<<<<< HEAD
   auto cmp = m->client_map.cbegin();
   map<client_t,entity_inst_t> client_map;
   map<client_t,client_metadata_t> client_metadata_map;
@@ -2714,9 +3458,43 @@ void Migrator::handle_export_dir(const cref_t<MExportDir> &m)
                       it->second.peer_exports,
                       it->second.updated_scatterlocks,
                       num_imported_inodes);
+=======
+  bufferlist::iterator cmp = m->client_map.begin();
+  ::decode(onlogged->imported_client_map, cmp);
+  assert(cmp.end());
+  le->cmapv = mds->server->prepare_force_open_sessions(onlogged->imported_client_map, onlogged->sseqmap);
+  le->client_map.claim(m->client_map);
+
+  #ifdef MDS_MONITOR_MIGRATOR
+  utime_t decode_start = ceph_clock_now();
+  #endif
+  bufferlist::iterator blp = m->export_data.begin();
+  int num_imported_inodes = 0;
+  while (!blp.end()) {
+    num_imported_inodes += 
+      decode_import_dir(blp,
+			oldauth, 
+			dir,                 // import root
+			le,
+			mds->mdlog->get_current_segment(),
+			it->second.peer_exports,
+			it->second.updated_scatterlocks,
+			now);
+
+      #ifdef MDS_MONITOR_MIGRATOR
+      dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (2) do import, num_imported_inodes is " << num_imported_inodes << dendl;
+      #endif 
+
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   }
   dout(10) << " " << m->bounds.size() << " imported bounds" << dendl;
   
+  #ifdef MDS_MONITOR_MIGRATOR
+  utime_t decode_end = ceph_clock_now();
+  export_breakdown_decode[dir] = (decode_end - decode_start);
+  dout(6) << " MDS_MONITOR_MIGRATOR " << __func__ << " Export_dir DECODE_FINISH on DIR " << *dir << " at " << decode_end
+        << " latency_decode " << export_breakdown_decode[dir] << dendl;
+  #endif
   // include bounds in EImportStart
   set<CDir*> import_bounds;
   for (const auto &bound : m->bounds) {
@@ -2739,6 +3517,10 @@ void Migrator::handle_export_dir(const cref_t<MExportDir> &m)
   // log it
   mds->mdlog->submit_entry(le, onlogged);
   mds->mdlog->flush();
+
+  #ifdef MDS_MONITOR_MIGRATOR
+    dout(7) << " MDS_MONITOR_MIGRATOR " << __func__ << " (3) log and end " << dendl;
+  #endif 
 
   // some stats
   if (mds->logger) {
@@ -3052,9 +3834,15 @@ void Migrator::import_logged_start(dirfrag_t df, CDir *dir, mds_rank_t from,
   // test surviving observer of a failed migration that did not complete
   //assert(dir->replica_map.size() < 2 || mds->get_nodeid() != 0);
 
+<<<<<<< HEAD
   auto ack = make_message<MExportDirAck>(dir->dirfrag(), it->second.tid);
   encode(imported_caps, ack->imported_caps);
 
+=======
+  MExportDirAck *ack = new MExportDirAck(dir->dirfrag(), it->second.tid);
+  ::encode(imported_caps, ack->imported_caps);
+  dout(7) << __func__ << " Youxu [15]send exportdir ack message!" << dendl;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   mds->send_message_mds(ack, from);
   assert (g_conf()->mds_kill_import_at != 8);
 
@@ -3064,9 +3852,15 @@ void Migrator::import_logged_start(dirfrag_t df, CDir *dir, mds_rank_t from,
 void Migrator::handle_export_finish(const cref_t<MExportDirFinish> &m)
 {
   CDir *dir = cache->get_dirfrag(m->get_dirfrag());
+<<<<<<< HEAD
   ceph_assert(dir);
   dout(7) << *dir << (m->is_last() ? " last" : "") << dendl;
 
+=======
+  assert(dir);
+  dout(7) << "handle_export_finish on " << *dir << (m->is_last() ? " last" : "") << dendl;
+  dout(7) << __func__ << " Youxu [19]get a export finish message!" << dendl;
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   map<dirfrag_t,import_state_t>::iterator it = import_state.find(m->get_dirfrag());
   ceph_assert(it != import_state.end());
   ceph_assert(it->second.tid == m->get_tid());
@@ -3491,6 +4285,7 @@ void Migrator::handle_export_notify(const cref_t<MExportDirNotify> &m)
     return;
   }
 
+  dout(7) << __func__ << " Youxu [10]get a notify message!" << dendl;
   CDir *dir = cache->get_dirfrag(m->get_dirfrag());
 
   mds_rank_t from = mds_rank_t(m->get_source().num());
@@ -3518,7 +4313,12 @@ void Migrator::handle_export_notify(const cref_t<MExportDirNotify> &m)
   
   // send ack
   if (m->wants_ack()) {
+<<<<<<< HEAD
     mds->send_message_mds(make_message<MExportDirNotifyAck>(m->get_dirfrag(), m->get_tid(), m->get_new_auth()), from);
+=======
+    dout(7) << __func__ << " Youxu [11]send a notify ack message!" << dendl;
+    mds->send_message_mds(new MExportDirNotifyAck(m->get_dirfrag(), m->get_tid(), m->get_new_auth()), from);
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst
   } else {
     // aborted.  no ack.
     dout(7) << "no ack requested" << dendl;
@@ -3680,6 +4480,7 @@ void Migrator::logged_import_caps(CInode *in,
   in->auth_unpin(this);
 }
 
+<<<<<<< HEAD
 Migrator::Migrator(MDSRank *m, MDCache *c) : mds(m), cache(c) {
   max_export_size = g_conf().get_val<Option::size_t>("mds_max_export_size");
   inject_session_race = g_conf().get_val<bool>("mds_inject_migrator_session_race");
@@ -3694,3 +4495,5 @@ void Migrator::handle_conf_change(const std::set<std::string>& changed, const MD
     dout(0) << "mds_inject_migrator_session_race is " << inject_session_race << dendl;
   }
 }
+=======
+>>>>>>> 0ed079b0911... Lunule v1.0: imbalance factor + coldfirst

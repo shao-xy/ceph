@@ -34,6 +34,10 @@
 #include "Mutation.h"
 #include "MDSContext.h"
 
+// New module to monitor MDS IOPS - from Youxu
+#define MDS_MONITOR
+// #define MDS_MONITOR_LAT
+
 class OSDMap;
 class LogEvent;
 class EMetaBlob;
@@ -80,6 +84,45 @@ enum {
   l_mdss_cap_acquisition_throttle,
   l_mdss_last,
 };
+
+#ifdef MDS_MONITOR
+enum {
+  // mon_mdss_dispatch_client_request,
+  // mon_mdss_dispatch_slave_request,
+  // mon_mdss_handle_client_request,
+  // mon_mdss_handle_client_session,
+  // mon_mdss_handle_slave_request,
+  mon_mdss_req_create,
+  mon_mdss_req_getattr,
+  mon_mdss_req_getfilelock,
+  mon_mdss_req_link,
+  mon_mdss_req_lookup,
+  mon_mdss_req_lookuphash,
+  mon_mdss_req_lookupino,
+  mon_mdss_req_lookupname,
+  mon_mdss_req_lookupparent,
+  mon_mdss_req_lookupsnap,
+  mon_mdss_req_lssnap,
+  mon_mdss_req_mkdir,
+  mon_mdss_req_mknod,
+  mon_mdss_req_mksnap,
+  mon_mdss_req_open,
+  mon_mdss_req_readdir,
+  mon_mdss_req_rename,
+  mon_mdss_req_renamesnap,
+  mon_mdss_req_rmdir,
+  mon_mdss_req_rmsnap,
+  mon_mdss_req_rmxattr,
+  mon_mdss_req_setattr,
+  mon_mdss_req_setdirlayout,
+  mon_mdss_req_setfilelock,
+  mon_mdss_req_setlayout,
+  mon_mdss_req_setxattr,
+  mon_mdss_req_symlink,
+  mon_mdss_req_unlink,
+  mon_mdss_req_num
+};
+#endif
 
 class Server {
 public:
@@ -311,6 +354,16 @@ public:
   bool terminating_sessions = false;
 
   set<client_t> client_reclaim_gather;
+
+  #ifdef MDS_MONITOR
+  // monitor
+  // int mon_req[mon_mdss_req_num]; // record the number of mdrequest for each operation at running time
+  int mon_op[mon_mdss_req_num];  // record the number of mdrequest the MDS handles every second
+  int iops_client_request;
+  int iops_slave_request;
+  void monitor_init();
+  static void *monitor_run(void *args); 
+  #endif
 
 private:
   friend class MDSContinuation;

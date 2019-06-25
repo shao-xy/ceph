@@ -37,7 +37,7 @@ static ostream& _prefix(std::ostream *_dout, AsyncMessenger *m) {
 }
 
 static ostream& _prefix(std::ostream *_dout, Processor *p) {
-  return *_dout << " Processor -- ";
+  return *_dout << "AsyncMessenger Processor -- ";
 }
 
 

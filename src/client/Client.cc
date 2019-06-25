@@ -104,6 +104,9 @@
 #include <unistd.h>
 #endif
 
+#define TRACE_COLLECTION
+
+
 #undef dout_prefix
 #define dout_prefix *_dout << "client." << whoami << " "
 
@@ -8213,6 +8216,13 @@ int Client::readdir_r_cb(dir_result_t *d, add_dirent_cb_t cb, void *p,
   ldout(cct, 10) << __func__ << " " << *dirp->inode << " offset " << hex << dirp->offset
 		 << dec << " at_end=" << dirp->at_end()
 		 << " hash_order=" << dirp->hash_order() << dendl;
+  #ifdef TRACE_COLLECTION
+  if(dirp->inode != NULL){
+    filepath fp;
+    dirp->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " readdir " << fp << dendl;
+  }
+  #endif
 
   struct dirent de;
   struct ceph_statx stx;
@@ -10893,6 +10903,13 @@ int Client::ll_lookup(Inode *parent, const char *name, struct stat *attr,
 	  << " -> " << r << " (" << hex << attr->st_ino << dec << ")" << dendl;
   tout(cct) << attr->st_ino << std::endl;
   *out = in.get();
+  #ifdef TRACE_COLLECTION
+  if(*out != NULL && (*out)->is_file()){
+    filepath fp;
+    (*out)->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " lookup " << fp << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -11191,6 +11208,13 @@ int Client::ll_getattr(Inode *in, struct stat *attr, const UserPerm& perms)
   if (res == 0)
     fill_stat(in, attr);
   ldout(cct, 3) << __func__ << " " << _get_vino(in) << " = " << res << dendl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " getattr " << fp << dendl;
+  }
+  #endif
   return res;
 }
 
@@ -11281,6 +11305,11 @@ int Client::ll_setattr(Inode *in, struct stat *attr, int mask,
   }
 
   ldout(cct, 3) << __func__ << " " << _get_vino(in) << " = " << res << dendl;
+  #ifdef TRACE_COLLECTION
+  filepath fp;
+  in->make_long_path(fp);
+  ldout(cct, 0) << " TRACE_COLLECTION " << " setattr " << fp << dendl;
+  #endif
   return res;
 }
 
@@ -11559,6 +11588,13 @@ int Client::ll_getxattr(Inode *in, const char *name, void *value,
   tout(cct) << __func__ << std::endl;
   tout(cct) << vino.ino.val << std::endl;
   tout(cct) << name << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " getxattr " << fp << " " << name << dendl;
+  }
+  #endif
 
   if (!fuse_default_permissions) {
     int r = xattr_permission(in, name, MAY_READ, perms);
@@ -11613,6 +11649,13 @@ int Client::ll_listxattr(Inode *in, char *names, size_t size,
   tout(cct) << __func__ << std::endl;
   tout(cct) << vino.ino.val << std::endl;
   tout(cct) << size << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " listxattr " << fp << dendl;
+  }
+  #endif
 
   return _listxattr(in, names, size, perms);
 }
@@ -11819,6 +11862,13 @@ int Client::ll_setxattr(Inode *in, const char *name, const void *value,
   tout(cct) << __func__ << std::endl;
   tout(cct) << vino.ino.val << std::endl;
   tout(cct) << name << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " setxattr " << fp << " " << name << " " << value << dendl;
+  }
+  #endif
 
   if (!fuse_default_permissions) {
     int r = xattr_permission(in, name, MAY_WRITE, perms);
@@ -11883,6 +11933,13 @@ int Client::ll_removexattr(Inode *in, const char *name, const UserPerm& perms)
   tout(cct) << "ll_removexattr" << std::endl;
   tout(cct) << vino.ino.val << std::endl;
   tout(cct) << name << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " removexattr " << fp << " " << name << dendl;
+  }
+  #endif
 
   if (!fuse_default_permissions) {
     int r = xattr_permission(in, name, MAY_WRITE, perms);
@@ -12291,6 +12348,13 @@ int Client::ll_mknod(Inode *parent, const char *name, mode_t mode,
   ldout(cct, 3) << "ll_mknod " << vparent << " " << name
 	  << " = " << r << " (" << hex << attr->st_ino << dec << ")" << dendl;
   *out = in.get();
+  #ifdef TRACE_COLLECTION
+  if(*out != NULL){
+    filepath fp;
+    (*out)->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " mknod " << fp << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -12517,6 +12581,13 @@ int Client::ll_mkdir(Inode *parent, const char *name, mode_t mode,
   ldout(cct, 3) << "ll_mkdir " << vparent << " " << name
 	  << " = " << r << " (" << hex << attr->st_ino << dec << ")" << dendl;
   *out = in.get();
+  #ifdef TRACE_COLLECTION
+  if(*out != NULL){
+    filepath fp;
+    (*out)->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " mkdir " << fp << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -12638,6 +12709,13 @@ int Client::ll_symlink(Inode *parent, const char *name, const char *value,
   ldout(cct, 3) << "ll_symlink " << vparent << " " << name
 	  << " = " << r << " (" << hex << attr->st_ino << dec << ")" << dendl;
   *out = in.get();
+  #ifdef TRACE_COLLECTION
+  if(*out != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " symlink " << fp << " " << name << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -12737,6 +12815,14 @@ int Client::ll_unlink(Inode *in, const char *name, const UserPerm& perm)
 
   vinodeno_t vino = _get_vino(in);
 
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " unlink " << fp << dendl;
+  }
+  #endif
+
   ldout(cct, 3) << "ll_unlink " << vino << " " << name << dendl;
   tout(cct) << "ll_unlink" << std::endl;
   tout(cct) << vino.ino.val << std::endl;
@@ -12817,6 +12903,13 @@ int Client::ll_rmdir(Inode *in, const char *name, const UserPerm& perms)
   tout(cct) << vino.ino.val << std::endl;
   tout(cct) << name << std::endl;
 
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " rmdir " << fp << dendl;
+  }
+  #endif
   if (!fuse_default_permissions) {
     int r = may_delete(in, name, perms);
     if (r < 0)
@@ -13001,6 +13094,15 @@ int Client::ll_rename(Inode *parent, const char *name, Inode *newparent,
   tout(cct) << vnewparent.ino.val << std::endl;
   tout(cct) << newname << std::endl;
 
+  #ifdef TRACE_COLLECTION
+  if(parent != NULL){
+    filepath fp;
+    parent->make_long_path(fp);
+    fp.push_dentry(name);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " rename " << fp << " " << newname << dendl;
+  }
+  #endif
+
   if (!fuse_default_permissions) {
     int r = may_delete(parent, name, perm);
     if (r < 0)
@@ -13076,6 +13178,15 @@ int Client::ll_link(Inode *in, Inode *newparent, const char *newname,
   tout(cct) << vnewparent << std::endl;
   tout(cct) << newname << std::endl;
 
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " link " << fp << " " << newname << dendl;
+  }
+  #endif
+
+  int r = 0;
   InodeRef target;
 
   if (!fuse_default_permissions) {
@@ -13218,6 +13329,13 @@ int Client::ll_opendir(Inode *in, int flags, dir_result_t** dirpp,
 
   ldout(cct, 3) << "ll_opendir " << vino << " = " << r << " (" << *dirpp << ")"
 		<< dendl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " opendir " << fp << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -13227,6 +13345,13 @@ int Client::ll_releasedir(dir_result_t *dirp)
   ldout(cct, 3) << "ll_releasedir " << dirp << dendl;
   tout(cct) << "ll_releasedir" << std::endl;
   tout(cct) << (unsigned long)dirp << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(dirp->inode != NULL){
+    filepath fp;
+    dirp->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " closedir " << fp << dendl;
+  }
+  #endif
 
   if (unmounting)
     return -ENOTCONN;
@@ -13241,6 +13366,13 @@ int Client::ll_fsyncdir(dir_result_t *dirp)
   ldout(cct, 3) << "ll_fsyncdir " << dirp << dendl;
   tout(cct) << "ll_fsyncdir" << std::endl;
   tout(cct) << (unsigned long)dirp << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(dirp->inode != NULL){
+    filepath fp;
+    dirp->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " fsyncdir " << fp << dendl;
+  }
+  #endif
 
   if (unmounting)
     return -ENOTCONN;
@@ -13281,6 +13413,16 @@ int Client::ll_open(Inode *in, int flags, Fh **fhp, const UserPerm& perms)
   tout(cct) << (unsigned long)fhptr << std::endl;
   ldout(cct, 3) << "ll_open " << vino << " " << ceph_flags_sys2wire(flags) <<
       " = " << r << " (" << fhptr << ")" << dendl;
+  #ifdef TRACE_COLLECTION
+  if(in != NULL){
+    filepath fp;
+    in->make_long_path(fp);
+    if(flags & (O_WRONLY | O_RDWR | O_CREAT | O_TRUNC | O_APPEND))
+      ldout(cct, 0) << " TRACE_COLLECTION " << " open.w " << fp << dendl;
+    else
+      ldout(cct, 0) << " TRACE_COLLECTION " << " open.r " << fp << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -13390,6 +13532,14 @@ int Client::ll_create(Inode *parent, const char *name, mode_t mode,
   } else {
     attr->st_ino = 0;
   }
+  #ifdef TRACE_COLLECTION
+  if(outp != NULL && *outp != NULL){
+    filepath fp;
+    parent->make_long_path(fp);
+    fp.push_dentry(name);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " create " << fp << dendl;
+  }
+  #endif
 
   return r;
 }
@@ -13445,6 +13595,14 @@ int Client::ll_read(Fh *fh, loff_t off, loff_t len, bufferlist *bl)
   tout(cct) << (unsigned long)fh << std::endl;
   tout(cct) << off << std::endl;
   tout(cct) << len << std::endl;
+
+  #ifdef TRACE_COLLECTION
+  if(fh->inode != NULL){
+    filepath fp;
+    fh->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " read " << fp << " offset " << off << " len " << len << dendl;
+  }
+  #endif
 
   if (unmounting)
     return -ENOTCONN;
@@ -13599,6 +13757,13 @@ int Client::ll_write(Fh *fh, loff_t off, loff_t len, const char *data)
   int r = _write(fh, off, len, data, NULL, 0);
   ldout(cct, 3) << "ll_write " << fh << " " << off << "~" << len << " = " << r
 		<< dendl;
+  #ifdef TRACE_COLLECTION
+  if(fh->inode != NULL){
+    filepath fp;
+    fh->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " write " << fp << " offset " << off << " len " << len << dendl;
+  }
+  #endif
   return r;
 }
 
@@ -13625,6 +13790,14 @@ int Client::ll_flush(Fh *fh)
   tout(cct) << "ll_flush" << std::endl;
   tout(cct) << (unsigned long)fh << std::endl;
 
+  #ifdef TRACE_COLLECTION
+  if(fh->inode != NULL){
+    filepath fp;
+    fh->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " flush " << fp << dendl;
+  }
+  #endif
+
   if (unmounting)
     return -ENOTCONN;
 
@@ -13637,6 +13810,13 @@ int Client::ll_fsync(Fh *fh, bool syncdataonly)
   ldout(cct, 3) << "ll_fsync " << fh << " " << fh->inode->ino << " " << dendl;
   tout(cct) << "ll_fsync" << std::endl;
   tout(cct) << (unsigned long)fh << std::endl;
+  #ifdef TRACE_COLLECTION
+  if(fh->inode != NULL){
+    filepath fp;
+    fh->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " fsync " << fp << dendl;
+  }
+  #endif
 
   if (unmounting)
     return -ENOTCONN;
@@ -13828,6 +14008,14 @@ int Client::fallocate(int fd, int mode, loff_t offset, loff_t length)
 int Client::ll_release(Fh *fh)
 {
   std::lock_guard lock(client_lock);
+
+  #ifdef TRACE_COLLECTION
+  if(fh->inode != NULL){
+    filepath fp;
+    fh->inode->make_long_path(fp);
+    ldout(cct, 0) << " TRACE_COLLECTION " << " close " << fp << dendl;
+  }
+  #endif
 
   if (unmounting)
     return -ENOTCONN;
