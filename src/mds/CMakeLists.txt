@@ -42,6 +42,8 @@ set(mds_srcs
   OpenFileTable.cc
   MigratorIPC.cc
   adsl/PathUtil.cc
+  adsl/ReqTracer.cc
+  adsl/ReqCounter.cc
   ${CMAKE_SOURCE_DIR}/src/common/TrackedOp.cc
   ${CMAKE_SOURCE_DIR}/src/common/MemoryModel.cc
   ${CMAKE_SOURCE_DIR}/src/osdc/Journaler.cc)

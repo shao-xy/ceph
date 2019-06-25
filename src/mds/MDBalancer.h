@@ -24,6 +24,8 @@
 
 #include "MDSMap.h"
 
+#include "mds/adsl/ReqTracer.h"
+
 class MDSRank;
 class MHeartbeat;
 class MIFBeat;
@@ -60,7 +62,8 @@ public:
   void adjust_pop_for_rename(CDir *pdir, CDir *dir, bool inc);
 
   void hit_inode(CInode *in, int type, int who=-1);
-  void hit_dir(CDir *dir, int type, int who=-1, double amount=1.0);
+  void hit_dir(CDir *dir, int type, int who=-1, double amount=1.0, int newold=-2);
+  void update_dir_pot_recur(CDir * dir, int level, double adj_auth_pot = 1.0, double adj_all_pot = 1.0);
 
   void queue_split(const CDir *dir, bool fast);
   void queue_merge(CDir *dir);
@@ -72,6 +75,9 @@ public:
    * \param hot whether the directory's temperature is enough to split it
    */
   void maybe_fragment(CDir *dir, bool hot);
+  
+  // try to dynamically split dir
+  void dynamically_fragment(CDir *dir, double amount);
 
   void handle_mds_failure(mds_rank_t who);
 
@@ -91,6 +97,7 @@ private:
     mds_rank_t whoami;
     bool is_bigger;
   }imbalance_summary_t;
+  static bool sortImporter (imbalance_summary_t i,imbalance_summary_t j) { return (i.my_if > j.my_if); };
 
   //set up the rebalancing targets for export and do one if the
   //MDSMap is up to date
@@ -114,6 +121,7 @@ private:
                     set<CDir*>& already_exporting,
                     mds_rank_t dest,
                     int descend_depth);
+  //void export_empties();
   void handle_ifbeat(MIFBeat *m);
   void simple_determine_rebalance(vector<migration_decision_t>& migration_decision);
   void find_exports(CDir *dir,
@@ -186,5 +194,11 @@ private:
   // per-epoch state
   double my_load = 0;
   double target_load = 0;
+
+  friend class CDir;
+  friend class mds_load_t;
+  ReqTracer req_tracer;
+public:
+  double calc_mds_load(mds_load_t load, bool auth = false);
 };
 #endif

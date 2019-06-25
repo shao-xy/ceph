@@ -733,6 +733,18 @@ void MDSRankDispatcher::tick()
     mdlog->trim();  // NOT during recovery!
   }
 
+  // Merged from 5da9634e8da... Lunule v2.0: migration with both spatial and temporal load
+  // log
+  //mds_load_t load = balancer->get_load(ceph_clock_now());
+
+  //if (logger) {
+  //  logger->set(l_mds_load_cent, 100 * balancer->calc_mds_load(load));
+  //  logger->set(l_mds_dispatch_queue_len, messenger->get_dispatch_queue_len());
+  //  logger->set(l_mds_subtrees, mdcache->num_subtrees());
+
+  //  mdcache->log_stat();
+  //}
+
   // ...
   if (is_clientreplay() || is_active() || is_stopping()) {
     server->find_idle_sessions();

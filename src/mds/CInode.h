@@ -42,6 +42,8 @@
 
 #include "messages/MClientCaps.h"
 
+#include "adsl/ReqCounter.h"
+
 #define dout_context g_ceph_context
 
 class Context;
@@ -1172,6 +1174,20 @@ private:
   int stickydir_ref = 0;
   scrub_info_t *scrub_infop = nullptr;
   /** @} Scrubbing and fsck */
+public:
+  int get_authsubtree_size_slow(int epoch = -1);
+
+  inode_load_vec_t pop;
+  ReqCounter hitcount;
+  int newoldhit[2];
+  int last_newoldhit[2];
+  int subtree_size;
+  int beat_epoch;
+
+  inline int maybe_update_epoch(int epoch = -1);
+  int hit(bool check_epoch = false, int epoch = -1);
+  pair<double, double> alpha_beta(int epoch = -1);
+  int last_hit_amount();
 };
 
 ostream& operator<<(ostream& out, const CInode& in);

@@ -38,6 +38,8 @@
 #include "include/ceph_assert.h"
 #include "include/compat.h"
 
+#include "MDBalancer.h"
+
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix
@@ -189,6 +191,76 @@ ostream& CDir::print_db_line_prefix(ostream& out)
 
 // -------------------------------------------------------------------
 // CDir
+void CDir::_maybe_update_epoch(int epoch)
+{
+  if (epoch > beat_epoch) {
+    beat_epoch = epoch;
+    num_dentries_auth_subtree_nested = get_authsubtree_size_slow(epoch);
+  }
+}
+
+int CDir::get_num_dentries_nested(int epoch)
+{
+  _maybe_update_epoch(epoch);
+  return num_dentries_nested;
+}
+
+int CDir::get_num_dentries_auth_subtree(int epoch)
+{ 
+  _maybe_update_epoch(epoch);
+  return num_dentries_auth_subtree;
+}
+
+int CDir::get_num_dentries_auth_subtree_nested(int epoch)
+{
+  _maybe_update_epoch(epoch);
+  return num_dentries_auth_subtree_nested;
+}
+
+void CDir::inc_density(int num_dentries_nested, int num_dentries_auth_subtree, int num_dentries_auth_subtree_nested, int epoch)
+{
+  _maybe_update_epoch(epoch);
+  this->num_dentries_nested += num_dentries_nested;
+  this->num_dentries_auth_subtree += num_dentries_auth_subtree;
+  this->num_dentries_auth_subtree_nested += num_dentries_auth_subtree_nested;
+  
+  CDir * pdir = get_parent_dir();
+  if (pdir) {
+    pdir->inc_density(num_dentries_nested, num_dentries_auth_subtree, num_dentries_auth_subtree_nested, epoch);
+  }
+}
+
+void CDir::dec_density(int num_dentries_nested, int num_dentries_auth_subtree, int num_dentries_auth_subtree_nested, int epoch)
+{
+  _maybe_update_epoch(epoch);
+  this->num_dentries_nested -= num_dentries_nested;
+  this->num_dentries_auth_subtree -= num_dentries_auth_subtree;
+  this->num_dentries_auth_subtree_nested -= num_dentries_auth_subtree_nested;
+  
+  CDir * pdir = get_parent_dir();
+  if (pdir) {
+    pdir->dec_density(num_dentries_nested, num_dentries_auth_subtree, num_dentries_auth_subtree_nested, epoch);
+  }
+}
+
+int CDir::get_authsubtree_size_slow(int epoch)
+{
+  if (epoch <= beat_epoch)	return num_dentries_auth_subtree_nested;
+
+  beat_epoch = epoch;
+
+  // calculate
+  num_dentries_auth_subtree_nested = 0;
+  for (auto it = items.begin(); it != items.end(); it++) {
+    CDentry::linkage_t * linkage = it->second->get_linkage();
+    // We do not care about null (only name) and remote (Inode on another MDS) dentries
+    if (linkage->is_primary()) {
+      num_dentries_auth_subtree_nested += linkage->get_inode()->get_authsubtree_size_slow(epoch);
+    }
+  }
+  num_dentries_auth_subtree_nested += items.size();
+  return num_dentries_auth_subtree_nested;
+}
 
 CDir::CDir(CInode *in, frag_t fg, MDCache *mdcache, bool auth) :
   cache(mdcache), inode(in), frag(fg),
@@ -368,6 +440,9 @@ CDentry* CDir::add_null_dentry(std::string_view dname,
 
   dout(12) << __func__ << " " << *dn << dendl;
 
+  // increase dentries count (this dentry itself)
+  inc_density(1, 0, is_auth());
+
   // pin?
   if (get_num_any() == 1)
     get(PIN_CHILD);
@@ -418,6 +493,23 @@ CDentry* CDir::add_primary_dentry(std::string_view dname, CInode *in,
   }    
 
   dout(12) << __func__ << " " << *dn << dendl;
+  
+  // increase dentries count (this dentry itself)
+  int delta_dentries_nested = 1, delta_auth_subtree = 0, delta_auth_subtree_nested = (int) is_auth();
+  
+  // check nested subtrees
+  if (in) {
+    std::list<CDir *> subs;
+    in->get_dirfrags(subs);
+    for (CDir * subroot : subs) {
+      delta_dentries_nested += subroot->num_dentries_nested;
+      if (subroot->is_auth()) {
+	delta_auth_subtree += 1;
+	delta_auth_subtree_nested += subroot->num_dentries_auth_subtree_nested;
+      }
+    }
+  }
+  inc_density(delta_dentries_nested, delta_auth_subtree, delta_auth_subtree_nested);
 
   // pin?
   if (get_num_any() == 1)
@@ -457,6 +549,9 @@ CDentry* CDir::add_remote_dentry(std::string_view dname, inodeno_t ino, unsigned
   }    
 
   dout(12) << __func__ << " " << *dn << dendl;
+
+  // increase dentries count (this dentry itself)
+  inc_density(1, 0, is_auth());
 
   // pin?
   if (get_num_any() == 1)
@@ -2516,6 +2611,13 @@ void CDir::encode_export(bufferlist& bl)
   encode(dir_rep_by, bl);  
   encode(get_replicas(), bl);
 
+  encode(pot_auth, bl);
+  encode(pot_all, bl);
+  encode(pot_cached, bl);
+
+  encode(dir_rep_by, bl);  
+  encode(get_replicas(), bl);
+
   get(PIN_TEMPEXPORTING);
   ENCODE_FINISH(bl);
 }
@@ -2560,6 +2662,14 @@ void CDir::decode_import(bufferlist::const_iterator& blp, LogSegment *ls)
 
   decode(dir_rep_by, blp);
   decode(get_replicas(), blp);
+
+  decode(pot_auth, blp);
+  decode(pot_all, blp);
+  decode(pot_cached, blp);
+
+  decode(dir_rep_by, blp);
+  decode(get_replicas(), blp);
+
   if (is_replicated()) get(PIN_REPLICATED);
 
   replica_nonce = 0;  // no longer defined
@@ -3557,6 +3667,39 @@ bool CDir::should_split_fast() const
   }
 
   return effective_size > fast_limit;
+}
+
+double CDir::get_load(MDBalancer * bal)
+{
+  _maybe_update_epoch(bal->beat_epoch);
+  //return pop_auth_subtree.meta_load(bal->rebalance_time, bal->mds->mdcache->decayrate) + pot_auth.pot_load(bal->beat_epoch);
+  string s;
+  inode->make_path_string(s);
+  vector<string> betastrs;
+  //pair<double, double> alpha_beta = bal->req_tracer.alpha_beta(s, num_dentries_auth_subtree_nested, betastrs);
+  pair<double, double> alpha_beta = inode->alpha_beta(beat_epoch);
+  double alpha = alpha_beta.first;
+  double beta = alpha_beta.second;
+  double pop = pop_auth_subtree.meta_load(bal->rebalance_time, bal->mds->mdcache->decayrate);
+  //double pop = pop_auth.pot_load(bal->beat_epoch);
+  double pot = pot_auth.pot_load(bal->beat_epoch);
+  //dout(0) << "CDir::get_load dir " << *this << " alpha " << alpha << " beta " << beta <<  " raw_pop " << pop << " old_and_oldhit " << (this->inode->last_newoldhit[0] + this->inode->last_newoldhit[1])  << " pot " << pot << dendl;
+  /*if (beta < 0) {
+    dout(0) << __func__ << " Illegal beta detected: subtree path=" << s << " size=" << num_dentries_auth_subtree_nested << " betacnt=" << betastrs.size() << dendl;
+    dout(0) << __func__ << "  Subtrees:" << dendl;
+    for (auto it = items.begin(); it != items.end(); it++) {
+      CDentry * de = it->second;
+      string curpath;
+      de->make_path_string(curpath);
+      dout(0) << __func__ << "   " << curpath << dendl;
+    }
+    dout(0) << __func__ << "  Visits:" << dendl;
+    for (string s : betastrs) {
+      dout(0) << __func__ << "   " << s << dendl;
+    }
+  }*/
+  return alpha * (this->inode->last_newoldhit[0] ) + beta * pot;
+  //return alpha * pop * 0.1 + beta * pot;
 }
 
 MEMPOOL_DEFINE_OBJECT_FACTORY(CDir, co_dir, mds_co);

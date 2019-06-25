@@ -839,6 +839,11 @@ CDir *CInode::add_dirfrag(CDir *dir)
 
   maybe_pin();
 
+  CDir * pdir = get_parent_dir();
+  if (pdir) {
+      pdir->inc_density(dir->get_num_dentries_nested(), dir->get_num_dentries_auth_subtree(), dir->get_num_dentries_auth_subtree_nested());
+  }
+
   return dir;
 }
 
@@ -865,6 +870,11 @@ void CInode::close_dirfrag(frag_t fg)
   // dump any remaining dentries, for debugging purposes
   for (const auto &p : dir->items)
     dout(14) << __func__ << " LEFTOVER dn " << *p.second << dendl;
+
+  CDir * pdir = get_parent_dir();
+  if (pdir) {
+      pdir->dec_density(dir->get_num_dentries_nested(), dir->get_num_dentries_auth_subtree(), dir->get_num_dentries_auth_subtree_nested());
+  }
 
   ceph_assert(dir->get_num_ref() == 0);
   delete dir;
@@ -4266,6 +4276,12 @@ void CInode::encode_export(bufferlist& bl)
     }
   encode(bounding, bl);
 
+  ::encode(newoldhit[0], bl);
+  ::encode(newoldhit[1], bl);
+  ::encode(last_newoldhit[0], bl);
+  ::encode(last_newoldhit[1], bl);
+  ::encode(beat_epoch, bl);
+
   _encode_locks_full(bl);
 
   _encode_file_locks(bl);
@@ -4370,6 +4386,12 @@ void CInode::decode_import(bufferlist::const_iterator& p,
       dout(10) << " took rstat info for " << *dir << dendl;
     }
   }
+
+  ::decode(newoldhit[0], p);
+  ::decode(newoldhit[1], p);
+  ::decode(last_newoldhit[0], p);
+  ::decode(last_newoldhit[1], p);
+  ::decode(beat_epoch, p);
 
   _decode_locks_full(p);
 
@@ -5561,4 +5583,78 @@ void CInode::get_subtree_dirfrags(std::vector<CDir*>& v) const
   }
 }
 
+int CInode::get_authsubtree_size_slow(int epoch)
+{
+  if (epoch % 3 == 0 || maybe_update_epoch(epoch) <= 0)
+    return subtree_size;
+
+  std::list<CDir*> subtrees;
+  get_dirfrags(subtrees);
+  subtree_size = 0;
+  for (CDir * subtree : subtrees) {
+    if (subtree->is_auth()) {
+      subtree_size += subtree->get_authsubtree_size_slow(epoch);
+    }
+  }
+  //dout(0) << __func__ << " epoch=" << epoch << " name=" << (parent ? parent->name : "root") << " subtreesize=" << subtree_size << dendl;
+  return subtree_size;
+}
+
+inline int CInode::maybe_update_epoch(int epoch)
+{
+  int ret = epoch - beat_epoch;
+  if (epoch > beat_epoch) {
+    hitcount.switch_epoch(epoch - beat_epoch);
+    if (ret == 1) {
+      last_newoldhit[0] = newoldhit[0];
+      last_newoldhit[1] = newoldhit[1];
+    } else {
+      last_newoldhit[0] = last_newoldhit[1] = 0;
+    }
+    newoldhit[0] = newoldhit[1] = 0;
+  }
+  beat_epoch = epoch;
+  return ret < 0 ? 2 : ret;
+}
+
+int CInode::hit(bool check_epoch, int epoch)
+{
+  if (check_epoch && maybe_update_epoch(epoch) < 0)
+    return -2;
+
+  //if (!is_auth())
+  //  return -2;
+  
+  int newold = hitcount.hit();
+  if (newold < 0)	return newold;
+  newoldhit[newold]++;
+
+  CInode * in = this;
+  while (in->get_parent_dn()) {
+    in = in->get_parent_dn()->get_dir()->get_inode();
+    in->newoldhit[newold]++;
+    //if (!in->is_auth())	break;
+  }
+  dout(0) << "CInode::hit Root old=" << mdcache->get_root()->newoldhit[0] << " new=" << mdcache->get_root()->newoldhit[1] << dendl;
+  return newold;
+}
+
+pair<double, double> CInode::alpha_beta(int epoch)
+{
+  // calculate subtree size
+  int subtree_size = get_authsubtree_size_slow(epoch);
+  maybe_update_epoch(epoch);
+  int oldcnt = last_newoldhit[0], newcnt = last_newoldhit[1];
+  int total = oldcnt + newcnt;
+  double alpha = total ? ((double) oldcnt / (oldcnt + newcnt)) : 0.0;
+  double beta = subtree_size ? ((double) (subtree_size - oldcnt) / subtree_size) : 0.0;
+  if(beta<=0.1)beta=0.1;
+  if(alpha<=0.1)alpha=0.1;
+  //dout(0) << "CInode::alpha_beta oldcnt=" << oldcnt << " newcnt=" << newcnt << " alpha=" << alpha << " beta=" << beta << dendl;
+  return std::make_pair<double, double>(std::move(alpha), std::move(beta));
+}
+
+int CInode::last_hit_amount(){
+  return last_newoldhit[0] + last_newoldhit[1];
+}
 MEMPOOL_DEFINE_OBJECT_FACTORY(CInode, co_inode, mds_co);

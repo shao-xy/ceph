@@ -31,6 +31,8 @@
 #include "include/ceph_assert.h"
 #include <boost/serialization/strong_typedef.hpp>
 
+#include "mds/adsl/mdstypes.h"
+
 #define CEPH_FS_ONDISK_MAGIC "ceph fs volume v011"
 
 #define MDS_PORT_CACHE   0x200
@@ -1711,6 +1713,8 @@ struct mds_load_t {
 
   dirfrag_load_vec_t auth;
   dirfrag_load_vec_t all;
+  dirfrag_pot_load_t pot_auth;
+  dirfrag_pot_load_t pot_all;
 
   mds_load_t() : auth(DecayRate()), all(DecayRate()) {}
   mds_load_t(const DecayRate &rate) : auth(rate), all(rate) {}
@@ -1721,7 +1725,14 @@ struct mds_load_t {
 
   double cpu_load_avg = 0.0;
 
-  double mds_load() const;  // defiend in MDBalancer.cc
+  //double mds_load() const;  // defiend in MDBalancer.cc
+  //explicit mds_load_t(const utime_t &t) : auth(t), all(t) {}
+  // mostly for the dencoder infrastructure
+  //mds_load_t() : auth(), all() {}
+  
+  double mds_pop_load();  // defiend in MDBalancer.cc
+  double mds_pot_load(bool auth = false, int epoch = -1);  // defiend in MDBalancer.cc
+  double mds_load(double alpha, double beta, int epoch = -1, bool is_auth = false, MDBalancer * bal = NULL);  // defiend in MDBalancer.cc
   void encode(bufferlist& bl) const;
   void decode(bufferlist::const_iterator& bl);
   void dump(Formatter *f) const;
@@ -1737,6 +1748,7 @@ inline void decode(mds_load_t &c, bufferlist::const_iterator &p) {
 inline std::ostream& operator<<(std::ostream& out, const mds_load_t& load)
 {
   return out << "mdsload<" << load.auth << "/" << load.all
+	     << ", " << load.pot_auth << "/" << load.pot_all
              << ", req " << load.req_rate 
              << ", hr " << load.cache_hit_rate
              << ", qlen " << load.queue_len
@@ -1841,7 +1853,8 @@ struct keys_and_values
 //for imbalance factor
 struct migration_decision_t {
     mds_rank_t target_import_mds;
-    float target_export_load;
+    double target_export_load;
+    double target_export_percent;
 
   /*void encode(bufferlist& bl) const {
     ENCODE_START(2, 2, bl);

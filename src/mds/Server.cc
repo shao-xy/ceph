@@ -4646,7 +4646,7 @@ void Server::handle_client_openc(MDRequestRef& mdr)
   // We hit_dir (via hit_inode) in our finish callback, but by then we might
   // have overshot the split size (multiple opencs in flight), so here is
   // an early chance to split the dir if this openc makes it oversized.
-  mds->balancer->maybe_fragment(dir, false);
+  //mds->balancer->maybe_fragment(dir, false);
 }
 
 
@@ -4907,6 +4907,7 @@ void Server::handle_client_readdir(MDRequestRef& mdr)
 
   // bump popularity.  NOTE: this doesn't quite capture it.
   mds->balancer->hit_dir(dir, META_POP_IRD, -1, numfiles);
+  //mds->balancer->hit_dir(now, dir, META_POP_IRD, -1, numfiles, dir->get_inode()->hit());
   
   // reply
   mdr->tracei = diri;
@@ -7499,6 +7500,7 @@ void Server::_unlink_local_finish(MDRequestRef& mdr,
 
   // bump pop
   mds->balancer->hit_dir(dn->get_dir(), META_POP_IWR);
+  //mds->balancer->hit_dir(mdr->get_mds_stamp(), dn->get_dir(), META_POP_IWR, -1, 1.0, dn->get_dir()->get_inode()->hit());
 
   // reply
   respond_to_request(mdr, 0);
@@ -8392,6 +8394,7 @@ void Server::_rename_finish(MDRequestRef& mdr, CDentry *srcdn, CDentry *destdn, 
   
   // bump popularity
   mds->balancer->hit_dir(srcdn->get_dir(), META_POP_IWR);
+  //mds->balancer->hit_dir(mdr->get_mds_stamp(), srcdn->get_dir(), META_POP_IWR, -1, 1.0, srcdn->get_dir()->get_inode()->hit());
   if (destdnl->is_remote() && in->is_auth())
     mds->balancer->hit_inode(in, META_POP_IWR);
 
@@ -9390,6 +9393,7 @@ void Server::_logged_slave_rename(MDRequestRef& mdr,
 
   // bump popularity
   mds->balancer->hit_dir(srcdn->get_dir(), META_POP_IWR);
+  //mds->balancer->hit_dir(mdr->get_mds_stamp(), srcdn->get_dir(), META_POP_IWR, -1, 1.0, srcdn->get_dir()->get_inode()->hit());
   if (destdnl->get_inode() && destdnl->get_inode()->is_auth())
     mds->balancer->hit_inode(destdnl->get_inode(), META_POP_IWR);
 
