@@ -53,6 +53,8 @@ if type ccache > /dev/null 2>&1 ; then
     ARGS+=" -DWITH_CCACHE=ON"
 fi
 
+ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr"
+
 mkdir $BUILD_DIR
 cd $BUILD_DIR
 if type cmake3 > /dev/null 2>&1 ; then
