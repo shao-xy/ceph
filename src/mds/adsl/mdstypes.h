@@ -18,11 +18,11 @@ struct dirfrag_pot_load_t {
 
   double pot_load(int epoch = -1, bool use_current = false);
   void encode(bufferlist& bl) const;
-  void decode(bufferlist::iterator & bl);
+  void decode(bufferlist::const_iterator & bl);
 };
 WRITE_CLASS_ENCODER(dirfrag_pot_load_t)
 
-inline std::ostream& operator<<( std::ostream& out, dirfrag_pot_load_t& load )
+inline std::ostream& operator<<( std::ostream& out, const dirfrag_pot_load_t& load )
 {
   return out << "pot<" << load.last_value << ',' << load.value << ',' << load.last_epoch << '>';
 }

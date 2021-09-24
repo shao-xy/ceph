@@ -13,9 +13,9 @@ using std::list;
 using std::vector;
 using std::pair;
 
-#include "include/assert.h"
+#include "include/ceph_assert.h"
 #include "common/Thread.h"
-#include "common/Mutex.h"
+#include "common/ceph_mutex.h"
 
 #define REQTRACER_QUEUE_LEN_DEFAULT 5
 
@@ -35,7 +35,7 @@ class ReqTracer : public Thread {
     };
     list <ReqCollector> _data;
     ReqCollector _last;
-    Mutex alpha_beta_mut;
+    ceph::mutex alpha_beta_mut;
 
     bool m_runFlag;
 

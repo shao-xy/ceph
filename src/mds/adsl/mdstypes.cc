@@ -2,6 +2,8 @@
 // vim: ts=8 sw=2 smarttab
 #include "mdstypes.h" // local
 
+#include "include/encoding.h"
+
 void dirfrag_pot_load_t::_update_epoch(int epoch)
 {
   if (epoch > last_epoch) {
@@ -46,16 +48,18 @@ double dirfrag_pot_load_t::pot_load(int epoch, bool use_current)
 
 void dirfrag_pot_load_t::encode(bufferlist& bl) const
 {
-  ::encode(value, bl);
-  ::encode(last_value, bl);
-  ::encode(last_epoch, bl);
+  using ceph::encode;
+  encode(value, bl);
+  encode(last_value, bl);
+  encode(last_epoch, bl);
 }
 
-void dirfrag_pot_load_t::decode(bufferlist::iterator & bl)
+void dirfrag_pot_load_t::decode(bufferlist::const_iterator & bl)
 {
-  ::decode(value, bl);
-  ::decode(last_value, bl);
-  ::decode(last_epoch, bl);
+  using ceph::decode;
+  decode(value, bl);
+  decode(last_value, bl);
+  decode(last_epoch, bl);
 }
 
 // --- DEPRECATED ---

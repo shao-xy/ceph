@@ -60,7 +60,7 @@ int ReqTracer::ReqCollector::total() const
 }
 
 ReqTracer::ReqTracer(int queue_len)
-  : _data(queue_len), alpha_beta_mut("lunule-alpha-beta"), m_runFlag(true)
+  : _data(queue_len), alpha_beta_mut(ceph::make_mutex("lunule-alpha-beta")), m_runFlag(true)
 {
   //create("MDS-ReqTracer");
 }
@@ -113,7 +113,7 @@ void ReqTracer::switch_epoch()
 {
   Mutex::Locker l(alpha_beta_mut);
 
-  assert(_data.size() > 0);
+  ceph_assert(_data.size() > 0);
   ReqCollector now_last;
   now_last.swap(_last);
   _data.pop_front();

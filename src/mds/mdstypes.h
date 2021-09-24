@@ -71,10 +71,6 @@
 #define MDS_INO_STRAY_OWNER(i) (signed (((unsigned (i)) - MDS_INO_STRAY_OFFSET) / NUM_STRAY))
 #define MDS_INO_STRAY_INDEX(i) (((unsigned (i)) - MDS_INO_STRAY_OFFSET) % NUM_STRAY)
 
-#define MDS_TRAVERSE_FORWARD       1
-#define MDS_TRAVERSE_DISCOVER      2    // skips permissions checks etc.
-#define MDS_TRAVERSE_DISCOVERXLOCK 3    // succeeds on (foreign?) null, xlocked dentries.
-
 typedef int32_t mds_rank_t;
 constexpr mds_rank_t MDS_RANK_NONE = -1;
 
@@ -1707,6 +1703,7 @@ inline std::ostream& operator<<(std::ostream& out, const dirfrag_load_vec_t& dl)
   return out << ss.str() << std::endl;
 }
 
+class MDBalancer;
 struct mds_load_t {
   using clock = dirfrag_load_vec_t::clock;
   using time = dirfrag_load_vec_t::time;

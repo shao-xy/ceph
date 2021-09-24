@@ -110,7 +110,6 @@ void Inode::make_short_path(filepath& p)
     make_nosnap_relative_path(p);
   } else
     p = filepath(ino);
-  }
 }
 
 /*

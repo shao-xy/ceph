@@ -338,6 +338,9 @@ protected:
   friend class C_MDS_ImportDirLoggedFinish;
   friend class C_M_LoggedImportCaps;
 
+  friend class C_MDC_ExportWaitWrlock;
+  friend class C_MDC_Retry_Export;
+
   void handle_export_discover_ack(const cref_t<MExportDirDiscoverAck> &m);
   void export_frozen(CDir *dir, uint64_t tid);
   void handle_export_prep_ack(const cref_t<MExportDirPrepAck> &m);

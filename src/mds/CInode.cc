@@ -4276,11 +4276,11 @@ void CInode::encode_export(bufferlist& bl)
     }
   encode(bounding, bl);
 
-  ::encode(newoldhit[0], bl);
-  ::encode(newoldhit[1], bl);
-  ::encode(last_newoldhit[0], bl);
-  ::encode(last_newoldhit[1], bl);
-  ::encode(beat_epoch, bl);
+  encode(newoldhit[0], bl);
+  encode(newoldhit[1], bl);
+  encode(last_newoldhit[0], bl);
+  encode(last_newoldhit[1], bl);
+  encode(beat_epoch, bl);
 
   _encode_locks_full(bl);
 
@@ -4387,11 +4387,11 @@ void CInode::decode_import(bufferlist::const_iterator& p,
     }
   }
 
-  ::decode(newoldhit[0], p);
-  ::decode(newoldhit[1], p);
-  ::decode(last_newoldhit[0], p);
-  ::decode(last_newoldhit[1], p);
-  ::decode(beat_epoch, p);
+  decode(newoldhit[0], p);
+  decode(newoldhit[1], p);
+  decode(last_newoldhit[0], p);
+  decode(last_newoldhit[1], p);
+  decode(beat_epoch, p);
 
   _decode_locks_full(p);
 

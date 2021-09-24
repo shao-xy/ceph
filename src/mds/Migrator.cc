@@ -67,18 +67,6 @@
 #define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".mig " << __func__ << " "
 
 // -- cons --
-Migrator::Migrator(MDSRank *m, MDCache *c) : mds(m), cache(c) {
-  #ifdef MDS_MIGRATOR_IPC
-  pthread_t tid_ipc_migrate;
-  int res = pthread_create(&tid_ipc_migrate, NULL, ipc_migrator, this);
-  if(res < 0){
-    dout(0) << __func__ << " create ipc thread failed." << dendl;
-    exit(-1); 
-  }
-  pthread_detach(tid_ipc_migrate);
-  #endif
-}
-
 class MigratorContext : public MDSContext {
 protected:
   Migrator *mig;
@@ -1474,7 +1462,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
     dir->unfreeze_tree();
     cache->try_subtree_merge(dir);
 
-    mds->send_message_mds(new MExportDirCancel(dir->dirfrag(), it->second.tid), it->second.peer);
+    mds->send_message_mds(make_message<MExportDirCancel>(dir->dirfrag(), it->second.tid), it->second.peer);
     export_state.erase(it);
 
     dir->state_clear(CDir::STATE_EXPORTING);
@@ -4178,6 +4166,15 @@ void Migrator::logged_import_caps(CInode *in,
 Migrator::Migrator(MDSRank *m, MDCache *c) : mds(m), cache(c) {
   max_export_size = g_conf().get_val<Option::size_t>("mds_max_export_size");
   inject_session_race = g_conf().get_val<bool>("mds_inject_migrator_session_race");
+  #ifdef MDS_MIGRATOR_IPC
+  pthread_t tid_ipc_migrate;
+  int res = pthread_create(&tid_ipc_migrate, NULL, ipc_migrator, this);
+  if(res < 0){
+    dout(0) << __func__ << " create ipc thread failed." << dendl;
+    exit(-1); 
+  }
+  pthread_detach(tid_ipc_migrate);
+  #endif
 }
 
 void Migrator::handle_conf_change(const std::set<std::string>& changed, const MDSMap& mds_map)

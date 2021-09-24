@@ -3680,7 +3680,8 @@ double CDir::get_load(MDBalancer * bal)
   pair<double, double> alpha_beta = inode->alpha_beta(beat_epoch);
   double alpha = alpha_beta.first;
   double beta = alpha_beta.second;
-  double pop = pop_auth_subtree.meta_load(bal->rebalance_time, bal->mds->mdcache->decayrate);
+  //double pop = pop_auth_subtree.meta_load();
+  double pop = this->inode->last_newoldhit[0];
   //double pop = pop_auth.pot_load(bal->beat_epoch);
   double pot = pot_auth.pot_load(bal->beat_epoch);
   //dout(0) << "CDir::get_load dir " << *this << " alpha " << alpha << " beta " << beta <<  " raw_pop " << pop << " old_and_oldhit " << (this->inode->last_newoldhit[0] + this->inode->last_newoldhit[1])  << " pot " << pot << dendl;
@@ -3698,7 +3699,7 @@ double CDir::get_load(MDBalancer * bal)
       dout(0) << __func__ << "   " << s << dendl;
     }
   }*/
-  return alpha * (this->inode->last_newoldhit[0] ) + beta * pot;
+  return alpha * pop + beta * pot;
   //return alpha * pop * 0.1 + beta * pot;
 }
 

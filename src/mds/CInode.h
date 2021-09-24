@@ -1177,7 +1177,7 @@ private:
 public:
   int get_authsubtree_size_slow(int epoch = -1);
 
-  inode_load_vec_t pop;
+  //inode_load_vec_t pop;
   ReqCounter hitcount;
   int newoldhit[2];
   int last_newoldhit[2];

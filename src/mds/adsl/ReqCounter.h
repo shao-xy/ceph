@@ -5,7 +5,7 @@
 
 #include <list>
 using std::list;
-#include "common/Mutex.h"
+#include "common/ceph_mutex.h"
 
 #define REQCOUNTER_QUEUE_LEN_DEFAULT 5
 
@@ -13,7 +13,7 @@ class ReqCounter {
     list<bool> _data;
     bool _last_hit;
     int _cache_hit_times;
-    Mutex mut;
+    ceph::mutex mut = ceph::make_mutex("ReqCounter");
   public:
     ReqCounter(int queue_len = REQCOUNTER_QUEUE_LEN_DEFAULT);
     void switch_epoch(int epoch_num = 1);

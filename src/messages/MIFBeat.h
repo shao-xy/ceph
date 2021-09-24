@@ -4,7 +4,10 @@
 #ifndef CEPH_MIFBEAT_H
 #define CEPH_MIFBEAT_H
 
+#include <string_view>
+
 #include "include/types.h"
+#include "include/encoding.h"
 #include "msg/Message.h"
 #include "mds/mdstypes.h"
 
@@ -22,17 +25,17 @@ class MIFBeat : public Message
     map<mds_rank_t, double> decision_map;
 
 public:
-    mds_load_t& get_load() { return load; }
-    int get_beat() { return beat; }
-    double get_IFvaule() {return IFvaule;}
-    vector<migration_decision_t>& get_decision() {return my_decision;}
+    const mds_load_t& get_load() const { return load; }
+    const int get_beat() const { return beat; }
+    const double get_IFvaule() const {return IFvaule;}
+    const vector<migration_decision_t>& get_decision() const {return my_decision;}
 
     MIFBeat()
-    : Message(MSG_MDS_IFBEAT), load(utime_t()), IFvaule(0) { }
+    : Message(MSG_MDS_IFBEAT), IFvaule(0) { }
     MIFBeat(mds_load_t& load, int beat)
     : Message(MSG_MDS_IFBEAT),
-      load(load){
-    this->beat = beat;
+      load(load),
+      beat(beat) {
   }
 
   MIFBeat(mds_load_t& load, int beat, double IFvaule)
@@ -56,7 +59,7 @@ public:
 private:
     ~MIFBeat()override {}
 public:
-  const char *get_type_name() const override { return "IFB"; }
+  std::string_view get_type_name() const override { return "IFB"; }
 
   void encode_payload(uint64_t features) override {
     for (vector<migration_decision_t>::iterator it = my_decision.begin();it!=my_decision.end();it++){
@@ -64,19 +67,20 @@ public:
       decision_map[(*it).target_import_mds]=(*it).target_export_percent;
     }
 
-    ::encode(load, payload);
-    ::encode(beat, payload);
-    ::encode(IFvaule, payload);
-    ::encode(decision_map, payload);
+    using ceph::encode;
+    encode(load, payload);
+    encode(beat, payload);
+    encode(IFvaule, payload);
+    encode(decision_map, payload);
   }
   
   void decode_payload() override {
-    bufferlist::iterator p = payload.begin();
-    utime_t now(ceph_clock_now());
-    ::decode(load, now, p);
-    ::decode(beat, p);
-    ::decode(IFvaule, p);
-    ::decode(decision_map, p);
+    using ceph::decode;
+    auto p = payload.cbegin();
+    decode(load, p);
+    decode(beat, p);
+    decode(IFvaule, p);
+    decode(decision_map, p);
     for(map<mds_rank_t, double>::iterator it = decision_map.begin(); it != decision_map.end();++it)
     {
       migration_decision_t temp_decision = {it->first,it->second,it->second};

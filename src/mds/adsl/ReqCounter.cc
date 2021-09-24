@@ -3,13 +3,13 @@
 #include "ReqCounter.h"
 
 ReqCounter::ReqCounter(int queue_len)
-  : _data(REQCOUNTER_QUEUE_LEN_DEFAULT), mut("ReqCounter")
+  : _data(queue_len)
 {
 }
 
 void ReqCounter::switch_epoch(int epoch_num)
 {
-  Mutex::Locker l(mut);
+  std::unique_lock l(mut);
 
   if (epoch_num <= 0)	return;
 
@@ -37,7 +37,7 @@ void ReqCounter::switch_epoch(int epoch_num)
 //    1 -> brand new hit
 int ReqCounter::hit()
 {
-  Mutex::Locker l(mut);
+  std::unique_lock l(mut);
   if (_last_hit) {
     return -1;
   }
