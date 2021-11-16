@@ -1,8 +1,13 @@
 #!/bin/sh -x
 git submodule update --init --recursive
 if test -e build; then
-    echo 'build dir already exists; rm -rf build and re-run'
-    exit 1
+    #echo 'build dir already exists; rm -rf build and re-run'
+    read -p 'build dir already exists; rm -rf build and re-run? (y/N)' c
+	if [ x${c}x != xyx ] && [ x${c}x != xYx ]; then
+    	exit 1
+	else
+		rm -rf build
+	fi
 fi
 
 ARGS=""
@@ -10,6 +15,8 @@ if which ccache ; then
     echo "enabling ccache"
     ARGS="$ARGS -DWITH_CCACHE=ON"
 fi
+
+ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr"
 
 mkdir build
 cd build
