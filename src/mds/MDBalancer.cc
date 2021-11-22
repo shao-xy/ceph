@@ -13,6 +13,7 @@
  */
 
 #include "include/compat.h"
+#include "adsl/mdstypes.h"
 #include "mdstypes.h"
 
 #include "MDBalancer.h"
@@ -285,6 +286,47 @@ int MDBalancer::localize_balancer()
   return r;
 }
 
+/*
+ * Simply forked from localize_balancer()
+ */
+int MDBalancer::localize_predictor()
+{
+  /* reset everything */
+  bool ack = false;
+  int r = 0;
+  bufferlist lua_src;
+  Mutex lock("pred_lock");
+  Cond cond;
+
+  /* we assume that predictor is in the metadata pool */
+  object_t oid = object_t(mds->mdsmap->get_predictor());
+  object_locator_t oloc(mds->mdsmap->get_metadata_pool());
+  ceph_tid_t tid = mds->objecter->read(oid, oloc, 0, 0, CEPH_NOSNAP, &lua_src, 0,
+                                       new C_SafeCond(&lock, &cond, &ack, &r));
+  dout(15) << "launched non-blocking read tid=" << tid
+           << " oid=" << oid << " oloc=" << oloc << dendl;
+
+  /* timeout: if we waste half our time waiting for RADOS, then abort! */
+  double t = ceph_clock_now() + g_conf->mds_bal_interval/2;
+  utime_t timeout;
+  timeout.set_from_double(t);
+  lock.Lock();
+  int ret_t = cond.WaitUntil(lock, timeout);
+  lock.Unlock();
+
+  /* success: store the predictor in memory and set the version. */
+  if (!r) {
+    if (ret_t == ETIMEDOUT) {
+      mds->objecter->op_cancel(tid, -ECANCELED);
+      return -ETIMEDOUT;
+    }
+    pred_code.assign(lua_src.to_str());
+    pred_version.assign(oid.name);
+    dout(10) << "localized predictor, pred_code=" << pred_code << dendl;
+  }
+  return r;
+}
+
 void MDBalancer::send_heartbeat()
 {
   utime_t now = ceph_clock_now();
@@ -397,6 +439,23 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
     }
   }
   mds_import_map[ who ] = m->get_import_map();
+
+  {
+    string cur_pred = mds->mdsmap->get_predictor();
+    use_pred = (cur_pred != "");
+    if (use_pred && pred_version != cur_pred) {
+      int r = localize_predictor();
+      if (r) {
+	mds->clog->warn() << "using old popularity: " << ADSL_METADATA_SYS
+	                  << " failed to load predictor=" << cur_pred
+			  << " : " << cpp_strerror(r);
+	use_pred = false;
+      } else if (mds->get_nodeid() == 0) {
+	/* only spam the cluster log from 1 mds on version changes */
+	mds->clog->info() << ADSL_METADATA_SYS << " predictor version changed: " << pred_version;
+      }
+    }
+  }
 
   {
     unsigned cluster_size = mds->get_mds_map()->get_num_in_mds();

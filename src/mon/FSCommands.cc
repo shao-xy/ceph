@@ -330,6 +330,19 @@ public:
           fs->mds_map.set_balancer(val);
         });
       return true;
+    } else if (var == "predictor") {
+      if (val.empty()) {
+        ss << "unsetting the metadata load predictor";
+      } else {
+        ss << "setting the metadata load predictor to " << val;
+      }
+      fsmap.modify_filesystem(
+	fs->fscid,
+	[val](std::shared_ptr<Filesystem> fs)
+        {
+          fs->mds_map.set_predictor(val);
+        });
+      return true;
     } else if (var == "max_file_size") {
       if (interr.length()) {
 	ss << var << " requires an integer value";

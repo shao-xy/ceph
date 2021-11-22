@@ -26,6 +26,8 @@ using std::map;
 #include "common/Clock.h"
 #include "common/Cond.h"
 
+#include "adsl/Predictor.h"
+
 class MDSRank;
 class Message;
 class MHeartbeat;
@@ -91,6 +93,7 @@ private:
 
   void export_empties();
   int localize_balancer();
+  int localize_predictor();
   void send_heartbeat();
   void handle_heartbeat(MHeartbeat *m);
   void find_exports(CDir *dir,
@@ -145,6 +148,12 @@ private:
 
   // per-epoch state
   double          my_load, target_load;
+
+public:
+  bool use_pred;
+  string pred_code;
+  string pred_version;
+  adsl::Predictor predictor;
 };
 
 #endif

@@ -1535,7 +1535,7 @@ inline std::ostream& operator<<(std::ostream& out, dirfrag_load_vec_t& dl)
 
 
 
-
+#include "adsl/mdstypes.h"
 
 
 /* mds_load_t
