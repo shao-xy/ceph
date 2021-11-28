@@ -6,6 +6,7 @@
 #include "Predictor.h"
 #include "PyPredictor.h"
 #include "LuaPredictor.h"
+#include "SocketPredictor.h"
 
 namespace adsl {
 
@@ -28,15 +29,18 @@ Predictor::Predictor()
 {
   lua_impl = new LuaPredictor();
   py_impl = new PyPredictor();
+  sock_impl = new SocketPredictor();
 }
 
 Predictor::~Predictor()
 {
   if (lua_impl)	delete lua_impl;
   if (py_impl)	delete py_impl;
+  if (sock_impl)  delete sock_impl;
 
   lua_impl = 0;
   py_impl = 0;
+  sock_impl = 0;
 }
 
 int Predictor::predict(string script_name,
@@ -51,9 +55,32 @@ int Predictor::predict(string script_name,
     impl = py_impl;
   } else if (endswith(script_name, ".lua")) {
     impl = lua_impl;
+  } else if (endswith(script_name, ".sock")) {
+    impl = sock_impl;
+    script_name = script_name.substr(0, script_name.length() - 5);
+    size_t semicolon_pos = script_name.find_last_of(':');
+    if (semicolon_pos == string::npos) {
+      static_cast<SocketPredictor*>(impl)->connect(script_name);
+    } else {
+      string addr = script_name.substr(0, semicolon_pos);
+      string port_str = script_name.substr(semicolon_pos + 1);
+      int port;
+      try {
+	port = std::stoi(port_str);
+	static_cast<SocketPredictor*>(impl)->connect(addr, port);
+      } catch (...) {
+	// invalid port string
+	impl = NULL;
+      }
+    }
   }
 
   return impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
+}
+
+bool Predictor::need_read_rados(string pred_name)
+{
+  return !endswith(pred_name, ".sock");
 }
 
 }; // namespace adsl

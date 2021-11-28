@@ -15,7 +15,8 @@ class PredictorImpl;
 class Predictor {
   PredictorImpl * lua_impl;
   PredictorImpl * py_impl;
-  bool endswith(const string & s, const char * suffix);
+  PredictorImpl * sock_impl;
+  static bool endswith(const string & s, const char * suffix);
 public:
   Predictor();
   ~Predictor();
@@ -23,6 +24,7 @@ public:
 	      boost::string_view script,
 	      vector<LoadArray_Int> cur_loads,
 	      LoadArray_Double &pred_load);
+  static bool need_read_rados(string pred_name);
 };
 
 class PredictorImpl {

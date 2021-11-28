@@ -37,9 +37,9 @@ struct LoadArray {
     : nums(len) {}
   LoadArray(T nums[], int len)
     : nums(nums, nums + len) {}
-  LoadArray(vector<T> nums)
-    : nums(nums) {}
   LoadArray(vector<T>& nums)
+    : nums(nums) {}
+  LoadArray(vector<T>&& nums)
     : nums(nums) {}
   T total() {
     return std::accumulate(nums.begin(), nums.end(), static_cast<T>(0));
