@@ -1543,8 +1543,8 @@ inline std::ostream& operator<<(std::ostream& out, dirfrag_load_vec_t& dl)
  */
 
 struct mds_load_t {
-  dirfrag_load_vec_t auth;
-  dirfrag_load_vec_t all;
+  adsl::dirfrag_load_t auth;
+  adsl::dirfrag_load_t all;
 
   double req_rate = 0.0;
   double cache_hit_rate = 0.0;
@@ -1552,7 +1552,7 @@ struct mds_load_t {
 
   double cpu_load_avg = 0.0;
 
-  explicit mds_load_t(const utime_t &t) : auth(t), all(t) {}
+  explicit mds_load_t(const utime_t &t, MDBalancer * bal = NULL) : auth(t, NULL, bal), all(t, NULL, bal) {}
   // mostly for the dencoder infrastructure
   mds_load_t() : auth(), all() {}
   

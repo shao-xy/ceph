@@ -154,6 +154,7 @@ public:
   string pred_code;
   string pred_version;
   adsl::Predictor predictor;
+  friend class adsl::dirfrag_load_pred_t;
 };
 
 #endif

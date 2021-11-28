@@ -13,7 +13,6 @@
  */
 
 #include "include/compat.h"
-#include "adsl/mdstypes.h"
 #include "mdstypes.h"
 
 #include "MDBalancer.h"
@@ -213,9 +212,59 @@ double mds_load_t::mds_load()
   return 0;
 }
 
+namespace adsl {
+
+vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
+{
+  if (!dir) return vector<LoadArray_Int>();
+
+  load_matrix.clear();
+  int idx = 0;
+  for (auto it = dir->begin();
+       it != dir->end();
+       it++) {
+    CDentry::linkage_t * linkage = it->second->get_linkage();
+    if (linkage && linkage->is_primary()) {
+      CInode * child = linkage->get_inode();
+      pos_map[idx++] = child;
+      load_matrix.push_back(child->get_loadarray(bal->beat_epoch));
+    }
+  }
+
+  return load_matrix;
+}
+
+double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
+  if (!dir || !bal)	return 0.0;
+
+  if (!predictor) {
+    predictor = &bal->predictor;
+  }
+
+  if (bal->beat_epoch > local_epoch) {
+    LoadArray_Double predicted;
+    if (!predictor->predict(bal->pred_code, load_prepare(), predicted)) {
+      return -1.0;
+    }
+    _load = predicted.total();
+    local_epoch = bal->beat_epoch;
+  }
+  return _load;
+}
+
+double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
+  return use_pred ? pred_load.meta_load() : decay_load.meta_load(now, rate);
+}
+
+double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
+  return use_pred ? pred_load.meta_load(predictor) : decay_load.meta_load();
+}
+
+};
+
 mds_load_t MDBalancer::get_load(utime_t now)
 {
-  mds_load_t load(now);
+  mds_load_t load(now, this);
 
   if (mds->mdcache->get_root()) {
     list<CDir*> ls;
@@ -677,7 +726,7 @@ void MDBalancer::prep_rebalance(int beat)
     double total_load = 0.0;
     multimap<double,mds_rank_t> load_map;
     for (mds_rank_t i=mds_rank_t(0); i < mds_rank_t(cluster_size); i++) {
-      map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now()));
+      map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now(), this));
       std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
       mds_load_t &load(r.first->second);
 
@@ -826,7 +875,7 @@ int MDBalancer::mantle_prep_rebalance()
   for (mds_rank_t i=mds_rank_t(0);
        i < mds_rank_t(cluster_size);
        i++) {
-    map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now()));
+    map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now(), this));
     std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
     mds_load_t &load(r.first->second);
 
@@ -1127,6 +1176,9 @@ void MDBalancer::hit_inode(utime_t now, CInode *in, int type, int who)
   // hit inode
   in->pop.get(type).hit(now, mds->mdcache->decayrate);
 
+  in->last_load++;
+  in->already_hit = true;
+
   if (in->get_parent_dn())
     hit_dir(now, in->get_parent_dn()->get_dir(), type, who);
 }
@@ -1165,6 +1217,13 @@ void MDBalancer::maybe_fragment(CDir *dir, bool hot)
 
 void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amount)
 {
+  CInode * in = dir->get_inode();
+  if (in->already_hit) {
+    in->already_hit = false;
+  } else {
+    in->last_load++;
+  }
+
   // hit me
   double v = dir->pop_me.get(type).hit(now, mds->mdcache->decayrate, amount);
 
@@ -1269,7 +1328,7 @@ void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amoun
  */
 void MDBalancer::subtract_export(CDir *dir, utime_t now)
 {
-  dirfrag_load_vec_t subload = dir->pop_auth_subtree;
+  adsl::dirfrag_load_t subload = dir->pop_auth_subtree;
 
   while (true) {
     dir = dir->inode->get_parent_dir();
@@ -1283,7 +1342,7 @@ void MDBalancer::subtract_export(CDir *dir, utime_t now)
 
 void MDBalancer::add_import(CDir *dir, utime_t now)
 {
-  dirfrag_load_vec_t subload = dir->pop_auth_subtree;
+  adsl::dirfrag_load_t subload = dir->pop_auth_subtree;
 
   while (true) {
     dir = dir->inode->get_parent_dir();

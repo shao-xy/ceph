@@ -353,10 +353,10 @@ protected:
   mempool::mds_co::compact_set<__s32> dir_rep_by;      // if dir_rep == REP_LIST
 
   // popularity
-  dirfrag_load_vec_t pop_me;
-  dirfrag_load_vec_t pop_nested;
-  dirfrag_load_vec_t pop_auth_subtree;
-  dirfrag_load_vec_t pop_auth_subtree_nested;
+  adsl::dirfrag_load_t pop_me;
+  adsl::dirfrag_load_t pop_nested;
+  adsl::dirfrag_load_t pop_auth_subtree;
+  adsl::dirfrag_load_t pop_auth_subtree_nested;
  
   utime_t last_popularity_sample;
 

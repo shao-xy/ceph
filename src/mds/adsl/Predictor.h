@@ -4,20 +4,25 @@
 #ifndef _ADSL_METADATA_PREDICTOR_H_
 #define _ADSL_METADATA_PREDICTOR_H_
 
-#include <vector>
-using std::vector;
+#include <boost/utility/string_view.hpp>
+
+#include <lua.hpp>
+
+#include "mdstypes.h"
 
 namespace adsl {
 
 class Predictor {
   public:
-    struct LoadArray {
-      // TODO
-      LoadArray();
-      double total();
-    };
+    Predictor();
+    ~Predictor() { if (L) lua_close(L); }
+    int predict(boost::string_view script,
+		vector<LoadArray_Int> cur_loads,
+		LoadArray_Double &pred_load);
 
-    LoadArray predict(vector<LoadArray> cur_loads);
+  protected:
+    lua_State *L;
+    string stack_dump();
 };
 
 }; // namespace adsl

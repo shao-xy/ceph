@@ -663,7 +663,8 @@ public:
     snaplock(this, &snaplock_type),
     nestlock(this, &nestlock_type),
     flocklock(this, &flocklock_type),
-    policylock(this, &policylock_type)
+    policylock(this, &policylock_type),
+    recent_load(RECENT_LOAD_EPOCH_LENGTH)
   {
     if (auth) state_set(STATE_AUTH);
   }
@@ -1146,6 +1147,15 @@ private:
                             int rval, int stage);
   friend class ValidationContinuation;
   /** @} Scrubbing and fsck */
+
+public:
+  int last_load = 0;
+  adsl::LoadArray_Int recent_load;
+  int my_beat_epoch = 0;
+  adsl::LoadArray_Int get_loadarray(int epoch);
+
+  // for MDBalancer::hit_dir(...) to check if this inode already hit
+  bool already_hit = false;
 };
 
 ostream& operator<<(ostream& out, const CInode::scrub_stamp_info_t& si);

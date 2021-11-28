@@ -4560,3 +4560,12 @@ bool CInode::is_exportable(mds_rank_t dest) const
 }
 
 MEMPOOL_DEFINE_OBJECT_FACTORY(CInode, co_inode, mds_co);
+
+adsl::LoadArray_Int CInode::get_loadarray(int epoch)
+{
+  if (epoch > my_beat_epoch) {
+    recent_load.shift(epoch - my_beat_epoch, last_load);
+    my_beat_epoch = epoch;
+  }
+  return recent_load;
+}

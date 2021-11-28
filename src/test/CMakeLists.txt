@@ -919,3 +919,5 @@ target_link_libraries(unittest_pageset global)
 
 #make check ends here
 
+# ADSL: our own tests
+add_subdirectory(adsl)
