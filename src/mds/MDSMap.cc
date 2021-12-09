@@ -615,6 +615,14 @@ void MDSMap::encode(bufferlist& bl, uint64_t features) const
   ::encode(cas_pool, bl);
 
   // kclient ignores everything from here
+
+  /** we use newer encoding version to encode predictor
+    * HINT: This only owrks in our environment.
+    * Since the version we use is high possibly used by later
+    * versions of Ceph deployers, this piece of code is NOT
+    * CAPATIBLE with later versions of Ceph.
+    * */
+  //__u16 ev = 12;
   __u16 ev = 13;
   ::encode(ev, bl);
   ::encode(compat, bl);
@@ -635,8 +643,8 @@ void MDSMap::encode(bufferlist& bl, uint64_t features) const
   ::encode(fs_name, bl);
   ::encode(damaged, bl);
   ::encode(balancer, bl);
-  ::encode(predictor, bl);
   ::encode(standby_count_wanted, bl);
+  ::encode(predictor, bl);
   ENCODE_FINISH(bl);
 }
 
@@ -764,11 +772,12 @@ void MDSMap::decode(bufferlist::iterator& p)
   }
 
   if (ev >= 12) {
-    ::decode(predictor, p);
+    ::decode(standby_count_wanted, p);
   }
 
+  // NOT CAPATIBLE with later version of Ceph
   if (ev >= 13) {
-    ::decode(standby_count_wanted, p);
+    ::decode(predictor, p);
   }
 
   DECODE_FINISH(p);
