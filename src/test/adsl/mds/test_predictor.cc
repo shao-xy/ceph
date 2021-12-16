@@ -12,7 +12,7 @@ using adsl::Predictor;
 using adsl::LoadArray_Int;
 using adsl::LoadArray_Double;
 
-string test1 = R"luascript(
+string lua_test_code1 = R"lua(
 function predict()
     prediction = {}
     for entry, entry_load_list in ipairs(load_matrix) do
@@ -24,7 +24,40 @@ function predict()
 end
 
 return predict()
-)luascript";
+)lua";
+
+string py_test_code1 = R"python(
+def predict(load_matrix):
+	ret = []
+	for load_array in load_matrix:
+		ret.append(load_array[-1])
+	#dout.log('Predicted: ' + str(ret))
+	#print(dout.test())
+	print(ret)
+	return ret
+)python";
+
+string py_test_code2 = R"python(
+def predict(load_matrix):
+	ret = []
+	for load_array in load_matrix:
+		ret.append(load_array[0])
+	#dout.log('Predicted: ' + str(ret))
+	#print(dout.test())
+	print(ret)
+	return ret
+)python";
+
+string py_test_code3 = R"python(
+def predict(load_matrix):
+	ret = []
+	for load_array in load_matrix:
+		ret.append(load_array[11])
+	#dout.log('Predicted: ' + str(ret))
+	#print(dout.test())
+	print(ret)
+	return ret
+)python";
 
 void test_mantle()
 {
@@ -42,7 +75,16 @@ void test_mantle()
 					  {"queue_len", i+4},
 					  {"cpu_load_avg", i+5}};
 	}
-	m.balance(test1, whoami, metrics, targets);
+	m.balance(lua_test_code1, whoami, metrics, targets);
+}
+
+void init_data(vector<LoadArray_Int> &loads)
+{
+	loads.push_back(LoadArray_Int(vector<int>{1,2,3,4,5}));
+	loads.push_back(LoadArray_Int(vector<int>{1,1,3,3,4}));
+	loads.push_back(LoadArray_Int(vector<int>{0,2,1,4,5}));
+	loads.push_back(LoadArray_Int(vector<int>{1,7,6,3,5}));
+	loads.push_back(LoadArray_Int(vector<int>{3,5,3,1,1}));
 }
 
 void test_predictor()
@@ -53,14 +95,15 @@ void test_predictor()
 	LoadArray_Double pred_load;
 
 	// prepare data
-	loads.push_back(LoadArray_Int(vector<int>{1,2,3,4,5}));
-	loads.push_back(LoadArray_Int(vector<int>{1,1,3,3,4}));
-	loads.push_back(LoadArray_Int(vector<int>{0,2,1,4,5}));
-	loads.push_back(LoadArray_Int(vector<int>{1,7,6,3,5}));
-	loads.push_back(LoadArray_Int(vector<int>{3,5,3,1,1}));
+	init_data(loads);
 
-	//std::cout << p.predict(test1, loads, pred_load) << std::endl;
-	p.predict(test1, loads, pred_load);
+	//std::cout << p.predict(lua_test_code1, loads, pred_load) << std::endl;
+	//p.predict("test.lua", lua_test_code1, loads, pred_load);
+	p.predict("test.py", py_test_code1, loads, pred_load);
+	pred_load.clear();
+	p.predict("test.py", py_test_code2, loads, pred_load);
+	pred_load.clear();
+	p.predict("test.py", py_test_code3, loads, pred_load);
 
 	return;
 

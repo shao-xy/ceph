@@ -237,17 +237,35 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   if (!dir || !bal)	return 0.0;
 
+  // if my parent has been predicted?
+  CInode * in = dir->get_inode();
+  list<CDir*> dfs;
+  in->get_dirfrags(dfs);
+  if ((dfs.size() == 0 || dfs.size() == 1)
+      && in->pred_epoch == bal->beat_epoch
+      && bal->beat_epoch > local_epoch) {
+    _load = in->pred_load;
+    local_epoch = bal->beat_epoch;
+    return _load;
+  }
+
   if (!predictor) {
     predictor = &bal->predictor;
   }
 
   if (bal->beat_epoch > local_epoch) {
     LoadArray_Double predicted;
-    if (!predictor->predict(bal->pred_code, load_prepare(), predicted)) {
+    if (!predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted)) {
       return -1.0;
     }
     _load = predicted.total();
     local_epoch = bal->beat_epoch;
+    int idx = 0;
+    for (auto it = predicted.begin();
+	 it != predicted.end();
+	 it++) {
+      pos_map[idx++]->set_pred_load(*it, local_epoch);
+    }
   }
   return _load;
 }

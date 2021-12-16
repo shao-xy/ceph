@@ -62,10 +62,11 @@ struct LoadArray {
     }
   }
   size_t size() { return nums.size(); }
+  void clear() { nums.clear(); }
   void append(T v) { nums.push_back(v); }
   typename vector<T>::iterator begin() { return nums.begin(); }
   typename vector<T>::iterator end() { return nums.end(); }
-  T operator[](int i) { return nums[i]; }
+  T operator[](size_t i) { return nums[i]; }
 };
 
 using LoadArray_Int = LoadArray<int>;

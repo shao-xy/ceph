@@ -1153,6 +1153,9 @@ public:
   adsl::LoadArray_Int recent_load;
   int my_beat_epoch = 0;
   adsl::LoadArray_Int get_loadarray(int epoch);
+  int pred_epoch = 0;
+  int pred_load = 0;
+  void set_pred_load(double pred_load_, int epoch);
 
   // for MDBalancer::hit_dir(...) to check if this inode already hit
   bool already_hit = false;

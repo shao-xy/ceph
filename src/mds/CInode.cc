@@ -4569,3 +4569,10 @@ adsl::LoadArray_Int CInode::get_loadarray(int epoch)
   }
   return recent_load;
 }
+
+void CInode::set_pred_load(double pred_load_, int epoch)
+{
+  if (epoch <= pred_epoch)	return;
+  pred_load = (int) pred_load_;
+  pred_epoch = epoch;
+}

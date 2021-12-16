@@ -6,26 +6,36 @@
 
 #include <boost/utility/string_view.hpp>
 
-#include <lua.hpp>
-
-#include "mdstypes.h"
+#include "mds/mdstypes.h"
 
 namespace adsl {
 
-class Predictor {
-  public:
-    Predictor();
-    ~Predictor() { if (L) lua_close(L); }
-    int predict(boost::string_view script,
-		vector<LoadArray_Int> cur_loads,
-		LoadArray_Double &pred_load);
+class PredictorImpl;
 
-  protected:
-    lua_State *L;
-    string stack_dump();
+class Predictor {
+  PredictorImpl * lua_impl;
+  PredictorImpl * py_impl;
+  bool endswith(const string & s, const char * suffix);
+public:
+  Predictor();
+  ~Predictor();
+  int predict(string script_name,
+	      boost::string_view script,
+	      vector<LoadArray_Int> cur_loads,
+	      LoadArray_Double &pred_load);
+};
+
+class PredictorImpl {
+  friend class Predictor;
+public:
+  PredictorImpl() {}
+  virtual ~PredictorImpl() {}
+protected:
+  virtual int predict(boost::string_view script,
+		      vector<LoadArray_Int> &cur_loads,
+		      LoadArray_Double &pred_load) = 0;
 };
 
 }; // namespace adsl
 
-
-#endif // mds/adsl/Predictor.h
+#endif /* mds/adsl/Predictor.h */
