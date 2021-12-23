@@ -8,8 +8,6 @@
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds_predictor
-#undef dout_prefix
-#define dout_prefix *_dout << "mds.predictor "
 #define predictor_dout(lvl) \
   do {\
     auto subsys = ceph_subsys_mds;\
@@ -20,6 +18,8 @@
 
 #define predictor_dendl dendl; } while (0)
 
+#undef dout_prefix
+#define dout_prefix *_dout << "mds.predictor[lua] "
 static int dout_wrapper(lua_State *L)
 {
   int level = luaL_checkinteger(L, 1);
@@ -27,6 +27,9 @@ static int dout_wrapper(lua_State *L)
   predictor_dout(level) << lua_tostring(L, 2) << predictor_dendl;
   return 0;
 }
+
+#undef dout_prefix
+#define dout_prefix *_dout << "mds.predictor "
 
 namespace adsl {
 

@@ -16,6 +16,7 @@ if which ccache ; then
     ARGS="$ARGS -DWITH_CCACHE=ON"
 fi
 
+#ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr -DWITH_PYTHON3=CHECK"
 ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr"
 
 mkdir build

@@ -1,3 +1,9 @@
+find_package (Python3 3.9 REQUIRED COMPONENTS Interpreter Development)
+message("Python3_FOUND: ${Python3_FOUND}")
+message("Python3_VERSION: ${Python3_VERSION}")
+message("Python3_Development_FOUND: ${Python3_Development_FOUND}")
+message("Python3_LIBRARIES: ${Python3_LIBRARIES}")
+message("Python3_INCLUDE_DIRS: ${Python3_INCLUDE_DIRS}")
 set(mds_srcs
   Capability.cc
   MDSDaemon.cc
@@ -44,5 +50,6 @@ set(mds_srcs
   ${CMAKE_SOURCE_DIR}/src/osdc/Journaler.cc)
 add_library(mds STATIC ${mds_srcs}
   $<TARGET_OBJECTS:heap_profiler_objs>)
-target_include_directories(mds PRIVATE "${PYTHON_INCLUDE_DIRS}")
-target_link_libraries(mds ${ALLOC_LIBS} osdc liblua Boost::python ${PYTHON_LIBRARIES})
+target_include_directories(mds PRIVATE "${Python3_INCLUDE_DIRS}")
+target_link_libraries(mds ${ALLOC_LIBS} osdc liblua ${Python3_LIBRARIES})
+#target_link_libraries(mds ${ALLOC_LIBS} osdc liblua ${Python3_LIBRARIES} Boost::python ${PYTHON_LIBRARIES})

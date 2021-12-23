@@ -27,12 +27,15 @@ return predict()
 )lua";
 
 string py_test_code1 = R"python(
+import sys
 def predict(load_matrix):
 	ret = []
 	for load_array in load_matrix:
 		ret.append(load_array[-1])
-	#dout.log('Predicted: ' + str(ret))
-	#print(dout.test())
+	#dout.log(0, 'Predicted: ' + str(ret))
+	#print(dir(dout))
+	#print(dout.log)
+	print(sys.path)
 	print(ret)
 	return ret
 )python";
@@ -42,18 +45,19 @@ def predict(load_matrix):
 	ret = []
 	for load_array in load_matrix:
 		ret.append(load_array[0])
-	#dout.log('Predicted: ' + str(ret))
-	#print(dout.test())
+	#dout.log(0, 'Predicted: ' + str(ret))
 	print(ret)
 	return ret
 )python";
 
 string py_test_code3 = R"python(
+import tensorflow
 def predict(load_matrix):
 	ret = []
 	for load_array in load_matrix:
-		ret.append(load_array[11])
-	#dout.log('Predicted: ' + str(ret))
+		#ret.append(load_array[11])
+		ret.append(load_array[1])
+	#dout.log(0, 'Predicted: ' + str(ret))
 	#print(dout.test())
 	print(ret)
 	return ret

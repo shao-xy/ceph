@@ -27,7 +27,6 @@ class PyPredictor : public PredictorImpl {
     PyObject * _mod_env_main;
     PyObject * _dict_env_global;
 
-    PyObject * _mod_dout;
     PyObject * _mod_pred;
 
     int _pre_predict(boost::string_view &script,
