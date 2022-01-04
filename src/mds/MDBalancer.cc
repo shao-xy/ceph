@@ -212,6 +212,8 @@ double mds_load_t::mds_load()
   return 0;
 }
 
+#undef dout_prefix
+#define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".bal "
 namespace adsl {
 
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
@@ -227,7 +229,12 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
     if (linkage && linkage->is_primary()) {
       CInode * child = linkage->get_inode();
       pos_map[idx++] = child;
-      load_matrix.push_back(child->get_loadarray(bal->beat_epoch));
+      LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
+      load_matrix.push_back(cur_load);
+
+      string s;
+      child->make_path_string(s);
+      //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }
 
@@ -255,17 +262,21 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
 
   if (bal->beat_epoch > local_epoch) {
     LoadArray_Double predicted;
-    if (!predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted)) {
+    if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
       return -1.0;
     }
     _load = predicted.total();
     local_epoch = bal->beat_epoch;
+    std::stringstream ss;
     int idx = 0;
     for (auto it = predicted.begin();
 	 it != predicted.end();
 	 it++) {
+      //dout(0) << __func__ << " Predicted: " << idx << " -> " << *it << dendl;
+      ss << *it << ' ';
       pos_map[idx++]->set_pred_load(*it, local_epoch);
     }
+    dout(0) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
   }
   return _load;
 }
@@ -279,6 +290,9 @@ double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
 }
 
 };
+
+#undef dout_prefix
+#define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".bal "
 
 mds_load_t MDBalancer::get_load(utime_t now)
 {

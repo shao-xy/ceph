@@ -69,6 +69,18 @@ struct LoadArray {
   T operator[](size_t i) { return nums[i]; }
 };
 
+template <typename T>
+std::ostream & operator<<(std::ostream & os, LoadArray<T> & la)
+{
+  os << "[ ";
+  for (auto it = la.begin();
+       it != la.end();
+       it++) {
+    os << *it << ' ';
+  }
+  return os << ']';
+}
+
 using LoadArray_Int = LoadArray<int>;
 using LoadArray_Double = LoadArray<double>;
 
@@ -125,18 +137,22 @@ public:
   explicit dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal);
 
   void encode(bufferlist &bl) const {
-      ENCODE_START(2, 2, bl);
-      ::encode(decay_load, bl);
-      ::encode(pred_load, bl);
-      ::encode(use_pred, bl);
-      ENCODE_FINISH(bl);
+    ENCODE_START(2, 2, bl);
+    ::encode(decay_load, bl);
+    ::encode(pred_load, bl);
+    ::encode(use_pred, bl);
+    ENCODE_FINISH(bl);
   }
-  void decode(bufferlist::iterator &p) {
-      DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, p);
-      ::decode(decay_load, p);
-      ::decode(pred_load, p);
-      ::decode(use_pred, p);
-      DECODE_FINISH(p);
+  void decode(const utime_t& now, bufferlist::iterator& bl) {
+    DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, bl);
+    ::decode(decay_load, now, bl);
+    ::decode(pred_load, bl);
+    ::decode(use_pred, bl);
+    DECODE_FINISH(bl);
+  }
+  void decode(bufferlist::iterator &bl) {
+    utime_t sample;
+    decode(sample, bl);
   }
   void dump(Formatter *f) const;
   DecayCounter &get(int t) {
@@ -175,10 +191,13 @@ inline std::ostream& operator<<(std::ostream& out, dirfrag_load_t& dl)
 
 };
 
-WRITE_CLASS_ENCODER(adsl::dirfrag_load_t)
-inline void decode(adsl::dirfrag_load_t& c, const utime_t &t, bufferlist::iterator &p) {
-  c.decay_load.decode(t, p);
-  c.pred_load.decode(p);
+inline void encode(const adsl::dirfrag_load_t &c, bufferlist &bl) { c.encode(bl); }
+inline void decode(adsl::dirfrag_load_t &c, const utime_t &t, bufferlist::iterator &p) {
+  c.decode(t, p);
+}
+inline void decode(adsl::dirfrag_load_t &c, bufferlist::iterator &p) {
+  utime_t sample;
+  c.decode(sample, p);
 }
 
 #endif /* mds/adsl/mdstypes.h */

@@ -104,12 +104,10 @@ void test_predictor()
 	//std::cout << p.predict(lua_test_code1, loads, pred_load) << std::endl;
 	//p.predict("test.lua", lua_test_code1, loads, pred_load);
 	p.predict("test.py", py_test_code1, loads, pred_load);
-	pred_load.clear();
-	p.predict("test.py", py_test_code2, loads, pred_load);
-	pred_load.clear();
-	p.predict("test.py", py_test_code3, loads, pred_load);
-
-	return;
+	//pred_load.clear();
+	//p.predict("test.py", py_test_code2, loads, pred_load);
+	//pred_load.clear();
+	//p.predict("test.py", py_test_code3, loads, pred_load);
 
 	for (auto it = pred_load.begin();
 		 it != pred_load.end();

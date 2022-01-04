@@ -847,6 +847,10 @@ Message *decode_message(CephContext *cct, int crcflags,
   m->set_middle(middle);
   m->set_data(data);
 
+  if (cct) {
+    ldout(cct, 15) << "Decoding payload for message type " << m->get_type_name() << " from " << header.src << dendl;
+  }
+
   try {
     m->decode_payload();
   }
@@ -863,6 +867,10 @@ Message *decode_message(CephContext *cct, int crcflags,
     }
     m->put();
     return 0;
+  }
+
+  if (cct) {
+    ldout(cct, 15) << "DONE - Decoding payload for message type " << m->get_type_name() << " from " << header.src << dendl;
   }
 
   // done!

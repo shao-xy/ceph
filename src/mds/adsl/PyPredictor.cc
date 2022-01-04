@@ -296,12 +296,17 @@ int PyPredictor::_pre_predict(boost::string_view &script,
 
 int PyPredictor::_post_predict(PyObject * func, PyObject * dict_cur_loads, PyObject * result)
 {
+  //PyObject_GC_Del(dict_cur_loads);
   Py_XDECREF(func);
   Py_XDECREF(dict_cur_loads);
   Py_XDECREF(result);
 
   Py_XDECREF(_mod_pred);
   _mod_pred = nullptr;
+
+  // Manual call GC
+  predictor_dout(0) << " Python GC size: " << PyGC_Collect() << predictor_dendl;
+
   return 0;
 }
 

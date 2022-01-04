@@ -777,7 +777,11 @@ void MDSMap::decode(bufferlist::iterator& p)
 
   // NOT CAPATIBLE with later version of Ceph
   if (ev >= 13) {
-    ::decode(predictor, p);
+    try {
+      ::decode(predictor, p);
+    } catch (const buffer::error &e) {
+      dout(0) << __func__ << " Decode predictor failed, IGNORED." << dendl;
+    }
   }
 
   DECODE_FINISH(p);
