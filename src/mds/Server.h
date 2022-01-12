@@ -31,6 +31,10 @@ class MClientRequest;
 class MClientReply;
 class MDLog;
 
+namespace adsl {
+  class FactorTracer;
+};
+
 enum {
   l_mdss_first = 1000,
   l_mdss_dispatch_client_request,
@@ -309,6 +313,8 @@ public:
 
 private:
   void reply_client_request(MDRequestRef& mdr, MClientReply *reply);
+
+  friend class adsl::FactorTracer;
 };
 
 #endif

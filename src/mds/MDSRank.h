@@ -116,6 +116,10 @@ class Finisher;
 class MMDSMap;
 class ScrubStack;
 
+namespace adsl {
+  class MDSMonitor;
+};
+
 /**
  * The public part of this class's interface is what's exposed to all
  * the various subsystems (server, mdcache, etc), such as pointers
@@ -180,6 +184,8 @@ class MDSRank {
 
     MDSTableClient *get_table_client(int t);
     MDSTableServer *get_table_server(int t);
+
+    adsl::MDSMonitor * adslmon;
 
     SessionMap   sessionmap;
     Session *get_session(client_t client) {
