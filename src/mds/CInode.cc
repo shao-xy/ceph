@@ -4561,12 +4561,35 @@ bool CInode::is_exportable(mds_rank_t dest) const
 
 MEMPOOL_DEFINE_OBJECT_FACTORY(CInode, co_inode, mds_co);
 
-adsl::LoadArray_Int CInode::get_loadarray(int epoch)
+int CInode::_check_update_epoch(int epoch)
 {
-  if (epoch > my_beat_epoch) {
-    recent_load.shift(epoch - my_beat_epoch, last_load);
+  int epoch_delta = epoch - my_beat_epoch;
+  if (epoch_delta > 0) {
+    recent_load.shift(epoch_delta, last_load);
+    last_load = 0;
     my_beat_epoch = epoch;
   }
+  return epoch_delta;
+}
+
+void CInode::hit_last_load(int epoch, int amount)
+{
+  CInode * in = this;
+  while (true) {
+    if (in->_check_update_epoch(epoch) < 0)	return;
+    in->last_load += amount;
+
+    CDentry * dn = in->get_parent_dn();
+    if (!dn)	return;
+
+    in = dn->get_dir()->get_inode();
+  }
+}
+
+adsl::LoadArray_Int CInode::get_loadarray(int epoch)
+{
+  _check_update_epoch(epoch);
+  dout(15) << __func__ << " Load array: " << recent_load << dendl;
   return recent_load;
 }
 

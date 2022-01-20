@@ -96,6 +96,8 @@ public:
   double _load;
   int local_epoch;
 
+  inline bool should_use();
+
   dirfrag_load_pred_t() {}
   explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal)
     : dir(dir), bal(bal) {}
@@ -120,6 +122,7 @@ public:
   void scale(double f) {
     _load *= f;
   }
+  void set_meta(MDBalancer * bal = NULL, CDir * dir = NULL);
 };
 
 };
@@ -131,7 +134,6 @@ class dirfrag_load_t {
 public:
   dirfrag_load_vec_t decay_load;
   dirfrag_load_pred_t pred_load;
-  bool use_pred;
 
   dirfrag_load_t() {}
   explicit dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal);
@@ -140,14 +142,12 @@ public:
     ENCODE_START(2, 2, bl);
     ::encode(decay_load, bl);
     ::encode(pred_load, bl);
-    ::encode(use_pred, bl);
     ENCODE_FINISH(bl);
   }
   void decode(const utime_t& now, bufferlist::iterator& bl) {
     DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, bl);
     ::decode(decay_load, now, bl);
     ::decode(pred_load, bl);
-    ::decode(use_pred, bl);
     DECODE_FINISH(bl);
   }
   void decode(bufferlist::iterator &bl) {
@@ -183,6 +183,7 @@ public:
     decay_load.scale(f);
     pred_load.scale(f);
   }
+  inline void set_meta(MDBalancer * bal = NULL, CDir * dir = NULL);
 };
 inline std::ostream& operator<<(std::ostream& out, dirfrag_load_t& dl)
 {

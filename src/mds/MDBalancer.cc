@@ -216,6 +216,22 @@ double mds_load_t::mds_load()
 #define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".bal "
 namespace adsl {
 
+inline void dirfrag_load_t::set_meta(MDBalancer * bal, CDir * dir)
+{
+  pred_load.set_meta(bal, dir);
+}
+
+bool dirfrag_load_pred_t::should_use()
+{
+  return bal->use_pred;
+}
+
+void dirfrag_load_pred_t::set_meta(MDBalancer * bal, CDir * dir)
+{
+  this->bal = (!bal && dir) ? (dir->get_inode()->mdcache->mds->balancer) : bal;
+  this->dir = dir;
+}
+
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
   if (!dir) return vector<LoadArray_Int>();
@@ -243,6 +259,11 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   if (!dir || !bal)	return 0.0;
+
+  // if current no predictor?
+  if (!bal->use_pred) {
+    return 0.0;
+  }
 
   // if my parent has been predicted?
   CInode * in = dir->get_inode();
@@ -282,11 +303,11 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
 }
 
 double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
-  return use_pred ? pred_load.meta_load() : decay_load.meta_load(now, rate);
+  return pred_load.should_use() ? pred_load.meta_load() : decay_load.meta_load(now, rate);
 }
 
 double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
-  return use_pred ? pred_load.meta_load(predictor) : decay_load.meta_load();
+  return pred_load.should_use() ? pred_load.meta_load(predictor) : decay_load.meta_load();
 }
 
 };
@@ -515,6 +536,11 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
     send_heartbeat();
 
     mds->mdcache->show_subtrees();
+  }
+
+  {
+    m->get_load().auth.set_meta(this);
+    m->get_load().all.set_meta(this);
   }
 
   {
@@ -1214,8 +1240,7 @@ void MDBalancer::hit_inode(utime_t now, CInode *in, int type, int who)
   // hit inode
   in->pop.get(type).hit(now, mds->mdcache->decayrate);
 
-  in->last_load++;
-  in->already_hit = true;
+  in->hit_last_load(beat_epoch);
 
   if (in->get_parent_dn())
     hit_dir(now, in->get_parent_dn()->get_dir(), type, who);
@@ -1256,11 +1281,7 @@ void MDBalancer::maybe_fragment(CDir *dir, bool hot)
 void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amount)
 {
   CInode * in = dir->get_inode();
-  if (in->already_hit) {
-    in->already_hit = false;
-  } else {
-    in->last_load++;
-  }
+  in->hit_last_load(beat_epoch, (int)amount);
 
   // hit me
   double v = dir->pop_me.get(type).hit(now, mds->mdcache->decayrate, amount);

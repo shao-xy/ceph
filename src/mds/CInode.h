@@ -1148,17 +1148,17 @@ private:
   friend class ValidationContinuation;
   /** @} Scrubbing and fsck */
 
+private:
+  int _check_update_epoch(int epoch);
 public:
   int last_load = 0;
   adsl::LoadArray_Int recent_load;
   int my_beat_epoch = 0;
+  void hit_last_load(int epoch, int amount = 1);
   adsl::LoadArray_Int get_loadarray(int epoch);
   int pred_epoch = 0;
   int pred_load = 0;
   void set_pred_load(double pred_load_, int epoch);
-
-  // for MDBalancer::hit_dir(...) to check if this inode already hit
-  bool already_hit = false;
 };
 
 ostream& operator<<(ostream& out, const CInode::scrub_stamp_info_t& si);

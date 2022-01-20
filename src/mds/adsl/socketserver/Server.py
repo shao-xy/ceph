@@ -29,6 +29,8 @@ class ServingThread(Thread):
             cur_row = load_mat[i]
             for j in range(col):
                 cur_row[j] = to_int(self.clientsocket.recv(4))
+        sys.stdout.write(f'Received: {load_mat}\n')
+        sys.stdout.flush()
         return load_mat
 
     def send(self, pred_load):
@@ -47,6 +49,8 @@ class ServingThread(Thread):
                 load_matrix = self.recv()
                 if not load_matrix:    break
                 pred_load = self.predictor.predict(load_matrix)
+                sys.stdout.write(f'Predicted: {pred_load}\n')
+                sys.stdout.flush()
                 self.send(pred_load)
         except ConnectionResetError:
             pass # Client closed
