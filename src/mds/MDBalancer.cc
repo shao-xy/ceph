@@ -250,7 +250,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
       string s;
       child->make_path_string(s);
-      //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }
 
@@ -263,6 +263,16 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   // if current no predictor?
   if (!bal->use_pred) {
     return 0.0;
+  }
+
+  {
+    string s;
+    if (dir) {
+      dir->get_inode()->make_path_string(s, true);
+    } else {
+      s = "(NULDIR)";
+    }
+    dout(0) << __func__ << ' ' << s << dendl;
   }
 
   // if my parent has been predicted?
@@ -302,12 +312,12 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   return _load;
 }
 
-double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
-  return pred_load.should_use() ? pred_load.meta_load() : decay_load.meta_load(now, rate);
+double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate, bool force_use_decay) {
+  return (!force_use_decay && pred_load.should_use()) ? pred_load.meta_load() : decay_load.meta_load(now, rate);
 }
 
-double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
-  return pred_load.should_use() ? pred_load.meta_load(predictor) : decay_load.meta_load();
+double dirfrag_load_t::meta_load(adsl::Predictor * predictor, bool force_use_decay) {
+  return (!force_use_decay && pred_load.should_use()) ? pred_load.meta_load(predictor) : decay_load.meta_load();
 }
 
 };
@@ -472,7 +482,7 @@ void MDBalancer::send_heartbeat()
     mds_rank_t from = im->inode->authority().first;
     if (from == mds->get_nodeid()) continue;
     if (im->get_inode()->is_stray()) continue;
-    import_map[from] += im->pop_auth_subtree.meta_load(now, mds->mdcache->decayrate);
+    import_map[from] += im->pop_auth_subtree.meta_load(now, mds->mdcache->decayrate, true);
   }
   mds_import_map[ mds->get_nodeid() ] = import_map;
 

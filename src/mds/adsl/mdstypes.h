@@ -168,8 +168,8 @@ public:
   }
 
   // these two functions defined in MDBalancer.cc
-  double meta_load(utime_t now, const DecayRate& rate);
-  double meta_load(Predictor * predictor = NULL);
+  double meta_load(utime_t now, const DecayRate& rate, bool force_use_decay = false);
+  double meta_load(Predictor * predictor = NULL, bool force_use_decay = false);
 
   void add(utime_t now, DecayRate& rate, dirfrag_load_t& r) {
     decay_load.add(now, rate, r.decay_load);
