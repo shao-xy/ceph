@@ -250,7 +250,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
       string s;
       child->make_path_string(s);
-      dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      dout(20) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }
 
@@ -272,7 +272,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
     } else {
       s = "(NULDIR)";
     }
-    dout(0) << __func__ << ' ' << s << dendl;
+    dout(10) << __func__ << ' ' << s << dendl;
   }
 
   // if my parent has been predicted?
@@ -307,7 +307,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
       ss << *it << ' ';
       pos_map[idx++]->set_pred_load(*it, local_epoch);
     }
-    dout(0) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
+    dout(20) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
   }
   return _load;
 }
@@ -997,7 +997,9 @@ void MDBalancer::try_rebalance(balance_state_t& state)
     CDir *im = *it;
     if (im->get_inode()->is_stray()) continue;
 
+    dout(0) << __func__ << " SXY-DEBUG before meta_load" << dendl;
     double pop = im->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+    dout(0) << __func__ << " SXY-DEBUG after meta_load" << dendl;
     if (g_conf->mds_bal_idle_threshold > 0 &&
 	pop < g_conf->mds_bal_idle_threshold &&
 	im->inode != mds->mdcache->get_root() &&
