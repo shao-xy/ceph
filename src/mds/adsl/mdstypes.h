@@ -11,6 +11,7 @@
 #include <vector>
 using std::vector;
 #include <algorithm>
+#include <numeric>
 
 #include "include/encoding.h"
 
