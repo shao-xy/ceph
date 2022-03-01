@@ -10,7 +10,11 @@
 
 #include <vector>
 using std::vector;
-#include <algorithm>
+//#if GCC_VERSION >= 9
+//#  include <numeric>
+//#else
+//#  include <algorithm>
+//#endif
 #include <numeric>
 
 #include "include/encoding.h"

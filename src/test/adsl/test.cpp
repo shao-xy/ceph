@@ -25,11 +25,10 @@ class thread_test : public Thread {
 		}
 
 		void count() {
+			sleep(1);
 			while (1) {
 				lock.Lock();
-				//while (!ready) {
-					condtion.Wait(lock);
-				//}
+				condtion.Wait(lock);
 				num++;
 
 				std::cout << num << std::endl;
@@ -42,7 +41,7 @@ int main() {
 	thread_test t;
 	for(int i = 1; i < 10; i++) {
 		t.lock.Lock();
-		t.ready = true;
+		sleep(2);
 		t.condtion.Signal();
 		t.lock.Unlock();
 		usleep(200 * 1000);

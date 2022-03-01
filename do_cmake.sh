@@ -21,7 +21,9 @@ fi
 #ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr -DWITH_PYTHON3=CHECK"
 ARGS+=" -DCMAKE_INSTALL_PREFIX=/usr"
 
-mkdir build
+if ! test -e build; then
+	mkdir build
+fi
 cd build
 cmake -DBOOST_J=$(nproc) $ARGS "$@" ..
 

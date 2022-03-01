@@ -64,7 +64,7 @@ if ! test -d "$TARGET_BUILD_DIR"; then
 fi
 
 cd $TARGET_BUILD_DIR
-make -j32 ceph-mds | single_line
+make -j32 ceph-mds adsl_test_mds_tf_predictor | single_line
 sudo install -p bin/ceph-mds /usr/bin/
 
 clear_log

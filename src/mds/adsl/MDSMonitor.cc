@@ -66,7 +66,7 @@ void * MDSMonitor::entry()
   dout(0) << "MDS_MONITOR thread start." << dendl;
   while (m_runFlag) {
     sleep(1);
-    update_and_writelog();
+    //update_and_writelog();
   }
   dout(0) << "MDS_MONITOR thread stop." << dendl;
   return NULL;

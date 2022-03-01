@@ -13,10 +13,12 @@ namespace adsl {
 class PredictorImpl;
 
 class Predictor {
-  PredictorImpl * lua_impl;
-  PredictorImpl * py_impl;
-  PredictorImpl * sock_impl;
+  PredictorImpl * lua_impl;	// Lua-script based predictor
+  PredictorImpl * py_impl;	// Python-script based predictor
+  PredictorImpl * sock_impl;	// Socket based predictor
+  PredictorImpl * tf_impl;	// Machine-Learning (TensorFlow) based predictor
   static bool endswith(const string & s, const char * suffix);
+  bool get_sock_addr(string pred_name, string & addr, int & port);
 public:
   Predictor();
   ~Predictor();
