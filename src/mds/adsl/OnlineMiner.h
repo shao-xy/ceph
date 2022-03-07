@@ -22,8 +22,8 @@ class OnlineMiner {
     virtual void hit(inodeno_t ino) = 0;
     
     // this two functions are called before prediction
-    virtual vector<inodeno_t> get_correlated(inodeno_t ino) = 0;
-    virtual map<inodeno_t, vector<inodeno_t>> get_full_correlated_table() = 0;
+    virtual map<inodeno_t, pair<int, float> >& get_correlated(inodeno_t ino) = 0;
+    virtual map<inodeno_t, map<inodeno_t, pair<int, float> > >& get_full_correlated_table() = 0;
 
   protected:
     // this function is invoked by the miner thread
