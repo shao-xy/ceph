@@ -153,6 +153,10 @@ constexpr unsigned long long operator"" _G (unsigned long long n) {
 
 std::vector<Option> get_global_options() {
   return std::vector<Option>({
+    Option("adsl_mds_mon_debug_level", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab: MDS monitor debug level")
+    .set_default(1),
+
     Option("host", Option::TYPE_STR, Option::LEVEL_BASIC)
     .set_description("local hostname")
     .set_long_description("if blank, ceph assumes the short hostname (hostname -s)")
