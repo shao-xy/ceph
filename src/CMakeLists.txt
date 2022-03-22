@@ -1,3 +1,7 @@
+set(ENV{Torch_DIR} "/home/ceph/LSTM/libtorch")
+find_package(Torch REQUIRED)
+message(STATUS "PyTorch lib found: ${TORCH_LIBRARIES}")
+
 include(GetGitRevisionDescription)
 
 enable_language(C ASM)
@@ -880,6 +884,8 @@ if(WITH_FUSE)
   target_link_libraries(ceph-osd ${FUSE_LIBRARIES})
 endif()
 install(TARGETS ceph-osd DESTINATION bin)
+
+add_subdirectory(adsl)
 
 add_subdirectory(mds)
 set(ceph_mds_srcs

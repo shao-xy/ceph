@@ -16,6 +16,7 @@ class Predictor {
   PredictorImpl * lua_impl;
   PredictorImpl * py_impl;
   PredictorImpl * sock_impl;
+  PredictorImpl * torch_impl;
   static bool endswith(const string & s, const char * suffix);
 public:
   Predictor();

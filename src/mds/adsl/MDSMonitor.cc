@@ -10,6 +10,15 @@
 #include "mds/Server.h"
 #include "mds/MDBalancer.h"
 
+#include "common/Thread.h"
+class TestThread : public Thread {
+  Mutex mut;
+public:
+  TestThread() : mut("test") {}
+protected:
+  void * entry() override { return NULL; }
+} t;
+
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix

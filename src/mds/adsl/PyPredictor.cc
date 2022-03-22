@@ -29,9 +29,10 @@
 
 namespace {
   struct PyLogger {
-    Mutex mut;
+    // Mutex mut;
     char buf[PYLOGGER_BUF_SIZE] = {0};
-    PyLogger() : mut("pylogger_mut") {}
+    PyLogger() {}
+    // PyLogger() : mut("pylogger_mut") {}
     ~PyLogger() { flush(); }
 
     static size_t get_flush_pos(const char * m) {
@@ -104,11 +105,11 @@ namespace {
       }
     }
     void write(const char * m) {
-      Mutex::Locker l(mut);
+      //Mutex::Locker l(mut);
       _write(m);
     }
     void flush() {
-      Mutex::Locker l(mut);
+      //Mutex::Locker l(mut);
       _flush();
     }
   };

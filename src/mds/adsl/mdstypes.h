@@ -20,7 +20,8 @@ using std::vector;
 
 #define ADSL_METADATA_SYS "M4"
 
-#define RECENT_LOAD_EPOCH_LENGTH 10
+//#define RECENT_LOAD_EPOCH_LENGTH 10
+#define RECENT_LOAD_EPOCH_LENGTH 48
 
 class CDir;
 class CInode;
@@ -48,17 +49,17 @@ struct LoadArray {
   void shift(size_t n = 1, T next = static_cast<T>(0)) {
     if (n <= 0)	return;
 
-    int len = nums.size();
+    size_t len = nums.size();
     if (n >= len) {
       nums = vector<T>(len);
       return;
     }
 
-    for (int i = 0; i < len - n; i++) {
+    for (size_t i = 0; i < len - n; i++) {
       nums[i] = nums[i + n];
     }
     nums[len - n] = next;
-    for (int i = len - n + 1; i < len; i++) {
+    for (size_t i = len - n + 1; i < len; i++) {
       nums[i] = 0;
     }
   }
@@ -67,7 +68,9 @@ struct LoadArray {
   void append(T v) { nums.push_back(v); }
   typename vector<T>::iterator begin() { return nums.begin(); }
   typename vector<T>::iterator end() { return nums.end(); }
-  T operator[](size_t i) { return nums[i]; }
+  T& operator[](size_t i) { return nums[i]; }
+  T* data() { return nums.data(); }
+  const T* data() const { return nums.data(); }
 };
 
 template <typename T>

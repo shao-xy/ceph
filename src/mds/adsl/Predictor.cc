@@ -7,6 +7,7 @@
 #include "PyPredictor.h"
 #include "LuaPredictor.h"
 #include "SocketPredictor.h"
+#include "TorchPredictor.h"
 
 namespace adsl {
 
@@ -28,19 +29,22 @@ bool Predictor::endswith(const string & s, const char * suffix)
 Predictor::Predictor()
 {
   lua_impl = new LuaPredictor();
-  py_impl = new PyPredictor();
+  // py_impl = new PyPredictor();
   sock_impl = new SocketPredictor();
+  torch_impl = new TorchPredictor();
 }
 
 Predictor::~Predictor()
 {
   if (lua_impl)	delete lua_impl;
-  if (py_impl)	delete py_impl;
+  // if (py_impl)	delete py_impl;
   if (sock_impl)  delete sock_impl;
+  if (torch_impl) delete torch_impl;
 
   lua_impl = 0;
-  py_impl = 0;
+  // py_impl = 0;
   sock_impl = 0;
+  torch_impl = 0;
 }
 
 int Predictor::predict(string script_name,
@@ -51,9 +55,9 @@ int Predictor::predict(string script_name,
   PredictorImpl * impl = 0;
 
   // switch predictor
-  if (endswith(script_name, ".py")) {
+  /* if (endswith(script_name, ".py")) {
     impl = py_impl;
-  } else if (endswith(script_name, ".lua")) {
+  } else */ if (endswith(script_name, ".lua")) {
     impl = lua_impl;
   } else if (endswith(script_name, ".sock")) {
     impl = sock_impl;
@@ -73,14 +77,16 @@ int Predictor::predict(string script_name,
 	impl = NULL;
       }
     }
-  }
+  }  else if (endswith(script_name, ".pt")) {
+    impl = static_cast<TorchPredictor*>(torch_impl)->load_model(script_name) ? torch_impl : NULL;
+  } 
 
   return impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
 }
 
 bool Predictor::need_read_rados(string pred_name)
 {
-  return !endswith(pred_name, ".sock");
+  return !endswith(pred_name, ".sock") && !endswith(pred_name, ".pt");
 }
 
 }; // namespace adsl

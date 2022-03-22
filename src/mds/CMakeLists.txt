@@ -1,9 +1,5 @@
-find_package (Python3 3.9 REQUIRED COMPONENTS Interpreter Development)
-message("Python3_FOUND: ${Python3_FOUND}")
-message("Python3_VERSION: ${Python3_VERSION}")
-message("Python3_Development_FOUND: ${Python3_Development_FOUND}")
-message("Python3_LIBRARIES: ${Python3_LIBRARIES}")
-message("Python3_INCLUDE_DIRS: ${Python3_INCLUDE_DIRS}")
+add_subdirectory(adsl)
+
 set(mds_srcs
   Capability.cc
   MDSDaemon.cc
@@ -42,15 +38,11 @@ set(mds_srcs
   MDLog.cc
   MDSCacheObject.cc
   Mantle.cc
-  adsl/MDSMonitor.cc
-  adsl/Predictor.cc
-  adsl/LuaPredictor.cc
-  adsl/PyPredictor.cc
-  adsl/SocketPredictor.cc
   ${CMAKE_SOURCE_DIR}/src/common/TrackedOp.cc
   ${CMAKE_SOURCE_DIR}/src/osdc/Journaler.cc)
 add_library(mds STATIC ${mds_srcs}
   $<TARGET_OBJECTS:heap_profiler_objs>)
-target_include_directories(mds PRIVATE "${Python3_INCLUDE_DIRS}")
-target_link_libraries(mds ${ALLOC_LIBS} osdc liblua ${Python3_LIBRARIES})
-#target_link_libraries(mds ${ALLOC_LIBS} osdc liblua ${Python3_LIBRARIES} Boost::python ${PYTHON_LIBRARIES})
+#target_include_directories(mds PRIVATE "${Python3_INCLUDE_DIRS}")
+#target_link_libraries(mds ${ALLOC_LIBS} osdc liblua ${Python3_LIBRARIES} "${TORCH_LIBRARIES}")
+target_link_libraries(mds ${ALLOC_LIBS} common osdc liblua mds-adsl mds-adsl-py)
+set_property(TARGET mds PROPERTY CXX_STANDARD 14)
