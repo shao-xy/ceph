@@ -218,6 +218,7 @@ namespace adsl {
 
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
+  return vector<LoadArray_Int>();
   if (!dir) return vector<LoadArray_Int>();
 
   load_matrix.clear();
@@ -232,8 +233,8 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
 
-      string s;
-      child->make_path_string(s);
+      //string s;
+      //child->make_path_string(s);
       //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }

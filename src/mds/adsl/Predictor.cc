@@ -9,6 +9,24 @@
 #include "SocketPredictor.h"
 #include "TFPredictor.h"
 
+#include "include/assert.h"
+#include "common/debug.h"
+
+#define dout_context g_ceph_context
+#define dout_subsys ceph_subsys_mds_predictor
+#define predictor_dout(lvl) \
+  do {\
+    auto subsys = ceph_subsys_mds;\
+    if ((dout_context)->_conf->subsys.should_gather(ceph_subsys_mds_predictor, lvl)) {\
+      subsys = ceph_subsys_mds_predictor;\
+    }\
+    dout_impl(dout_context, subsys, lvl) dout_prefix
+
+#define predictor_dendl dendl; } while (0)
+
+#undef dout_prefix
+#define dout_prefix *_dout << "mds.predictor "
+
 namespace adsl {
 
 bool Predictor::endswith(const string & s, const char * suffix)
@@ -49,6 +67,7 @@ Predictor::Predictor()
   lua_impl = new LuaPredictor();
   py_impl = new PyPredictor();
   sock_impl = new SocketPredictor();
+  tf_impl = new TFPredictor();
 }
 
 Predictor::~Predictor()
@@ -56,10 +75,12 @@ Predictor::~Predictor()
   if (lua_impl)	delete lua_impl;
   if (py_impl)	delete py_impl;
   if (sock_impl)  delete sock_impl;
+  if (tf_impl)	delete tf_impl;
 
   lua_impl = 0;
   py_impl = 0;
   sock_impl = 0;
+  tf_impl = 0;
 }
 
 int Predictor::predict(string script_name,
@@ -96,7 +117,11 @@ int Predictor::predict(string script_name,
     }
   }
 
-  return impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
+  //return impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
+  dout(0) << __func__ << " after load_model" << dendl;
+  int ret = impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
+  dout(0) << __func__ << " after predict." << dendl;
+  return ret;
 }
 
 bool Predictor::need_read_rados(string pred_name)

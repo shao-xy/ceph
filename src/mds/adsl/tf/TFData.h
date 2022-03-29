@@ -31,14 +31,13 @@ struct TFData {
 	int ndata;
 	float * data;
 
-	// TODO: record width here when initializing with real data
 	int cur_width = 0;
 
 	TFData(TFContext * ctx = NULL, const char * input_file = NULL);
 	~TFData();
 
 	bool init_output(TF_Output ** p_outptr, int * p_num, int size, string op_name_prefix, bool mark_id = true);
-	static void init_data(int64_t ** p_dims, int * p_ndims, float ** p_data, int * p_ndata, vector<vector<float> > *p_data_from_file = NULL);
+	static void init_data(int64_t ** p_dims, int * p_ndims, float ** p_data, int * p_ndata, int * p_cur_width, vector<vector<float> > *p_data_from_file = NULL);
 	bool init_tensors();
 
 	static void NoOpDeallocator(void* data, size_t a, void* b) { }

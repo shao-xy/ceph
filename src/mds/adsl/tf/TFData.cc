@@ -49,9 +49,9 @@ TFData::TFData(TFContext * ctx, const char * input_file)
 
 	if (input_file) {
 		vector<vector<float> > matrix = read_from_file(input_file);
-		init_data(&dims, &ndims, &data, &ndata, &matrix);
+		init_data(&dims, &ndims, &data, &ndata, &cur_width, &matrix);
 	} else {
-		init_data(&dims, &ndims, &data, &ndata);
+		init_data(&dims, &ndims, &data, &ndata, &cur_width);
 	}
 
 	init_tensors();
@@ -87,7 +87,7 @@ bool TFData::init_output(TF_Output ** p_outptr, int * p_num, int size, string op
 	return true;
 }
 
-void TFData::init_data(int64_t ** p_dims, int * p_ndims, float ** p_data, int * p_ndata, vector<vector<float> > *p_data_from_file)
+void TFData::init_data(int64_t ** p_dims, int * p_ndims, float ** p_data, int * p_ndata, int * p_cur_width, vector<vector<float> > *p_data_from_file)
 {
 	bool gen_random = (p_data_from_file == NULL) || p_data_from_file->empty() || p_data_from_file->front().empty();
 
@@ -121,6 +121,8 @@ void TFData::init_data(int64_t ** p_dims, int * p_ndims, float ** p_data, int * 
 			}
 		}
 	}
+	// TODO: check this
+	(*p_cur_width) = (*p_dims)[2];
 }
 
 bool TFData::init_tensors()
