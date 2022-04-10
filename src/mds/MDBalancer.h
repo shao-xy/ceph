@@ -27,6 +27,8 @@ using std::map;
 #include "common/Cond.h"
 
 #include "adsl/Predictor.h"
+#include "mds/adsl/ReqTracer.h"
+#include "mds/adsl/CMiner.h"
 
 class MDSRank;
 class Message;
@@ -45,7 +47,13 @@ public:
     mon_client(monc),
     beat_epoch(0),
     last_epoch_under(0), my_load(0.0), target_load(0.0)
-    { }
+    {
+      miner = new CMiner(10, 0.5, 10, 100, 10, 10, 0.5);
+    }
+
+  ~MDBalancer() {
+    delete miner;
+  }
 
   mds_load_t get_load(utime_t);
 
@@ -155,6 +163,10 @@ public:
   string pred_version;
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
+
+  double calc_mds_load(mds_load_t load, bool auth = false);
+  
+  OnlineMiner * miner;
 };
 
 #endif

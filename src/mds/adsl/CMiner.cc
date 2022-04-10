@@ -1,7 +1,32 @@
 #include "CMiner.h"
 
-CMiner::CMiner() : mine_lock("mine_lock") {
+#define dout_context g_ceph_context
+#define dout_subsys ceph_subsys_mds
+#undef dout_prefix
+#define dout_prefix *_dout
+#undef dout
+#define dout(lvl) \
+	  do {\
+		      auto subsys = ceph_subsys_mds;\
+		      if ((dout_context)->_conf->subsys.should_gather(ceph_subsys_mds_balancer, lvl)) {\
+				        subsys = ceph_subsys_mds_balancer;\
+				      }\
+		      dout_impl(dout_context, subsys, lvl) dout_prefix
+#undef dendl
+#define dendl dendl_impl; } while (0)
+
+CMiner::CMiner(int am_supp, float am_conf, int m_epoch, int win_size, int m_gap, int m_supp, float m_conf):
+	overall_min_support(am_supp),
+	overall_min_confidence(am_conf),
+	max_epoch(m_epoch),
+	window_size(win_size),
+	max_gap(m_gap),
+	min_support(m_supp),
+	min_confidence(m_conf),
+	mine_lock("mine_lock")
+{
 	create("mine_thread"); // create the thread
+	last_process_time = std::chrono::steady_clock::now();
 }
 
 CMiner::~CMiner() {
@@ -14,6 +39,8 @@ void CMiner::hit(inodeno_t ino){
     input.push_back(ino);
 
     input_lock.unlock();
+
+	signal_miner();
 }
 
 map<inodeno_t, pair<int, float> >& CMiner::get_correlated(inodeno_t ino){
@@ -201,12 +228,37 @@ void CMiner::from_series_to_table(){
 }
 
 void *CMiner::entry() {
+	dout(0) << "Thread created." << dendl;
+
 	while (1) {
 		mine_lock.Lock();
 		mine_cond.Wait(mine_lock);
 
-		if (1) { // add condition later
+		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+		if (std::chrono::duration_cast<std::chrono::seconds>(now - last_process_time).count() > 60) {
+			dout(0) << "CMiner start processing." << dendl;
+			last_process_time = now;
 			process();
+			dout(0) << "CMiner finish processing." << dendl;
+
+			// debug info
+			int curr_index = 0;
+			for (auto &map_item : correlation_series) {
+				dout(0) << "current index: " << ++curr_index << dendl;
+				for (auto &inode : map_item) {
+					auto& curr_inode = inode.first;
+					auto& miner_series = inode.second;
+
+					dout(0) << "inode number: " << curr_inode << dendl;
+
+					for (auto &relation_pair : miner_series) {
+						auto &related_inode = relation_pair.first;
+						auto &data = relation_pair.second;
+
+						dout(0) << "    related inode number: " << related_inode << " (" << data.first << ", " << data.second << ")" << dendl;
+					}
+				}
+			}
 		}
 
 		mine_lock.Unlock();
