@@ -1,4 +1,5 @@
 #include "CMiner.h"
+#include "mds/MDBalancer.h"
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
@@ -11,11 +12,13 @@
 		      if ((dout_context)->_conf->subsys.should_gather(ceph_subsys_mds_balancer, lvl)) {\
 				        subsys = ceph_subsys_mds_balancer;\
 				      }\
-		      dout_impl(dout_context, subsys, lvl) dout_prefix
+		      dout_impl(dout_context, subsys, lvl) dout_prefix \
+              << "epoch: " << balancer->get_beat_epoch() << " "
 #undef dendl
 #define dendl dendl_impl; } while (0)
 
-CMiner::CMiner(int am_supp, float am_conf, int m_epoch, int win_size, int m_gap, int m_supp, float m_conf):
+CMiner::CMiner(MDBalancer * balancer, int am_supp, float am_conf, int m_epoch, int win_size, int m_gap, int m_supp, float m_conf):
+	OnlineMiner(balancer),
 	overall_min_support(am_supp),
 	overall_min_confidence(am_conf),
 	max_epoch(m_epoch),
@@ -26,7 +29,7 @@ CMiner::CMiner(int am_supp, float am_conf, int m_epoch, int win_size, int m_gap,
 	mine_lock("mine_lock")
 {
 	create("mine_thread"); // create the thread
-	last_process_time = std::chrono::steady_clock::now();
+	last_epoch = balancer->get_beat_epoch(); // get current epoch
 }
 
 CMiner::~CMiner() {
@@ -40,7 +43,7 @@ void CMiner::hit(inodeno_t ino){
 
     input_lock.unlock();
 
-	signal_miner();
+	// signal_miner();
 }
 
 map<inodeno_t, pair<int, float> >& CMiner::get_correlated(inodeno_t ino){
@@ -60,6 +63,13 @@ void CMiner::process(){
     // move the data into temp
     vector<inodeno_t> temp_input = move(input);
     input_lock.unlock();
+
+	// print debug info
+	std::stringstream debug_out;
+	for (auto &inode : temp_input) {
+		debug_out << inode << " ";
+	}
+	dout(0) << "PROCESS VECTOR: " << debug_out.str() << dendl;
 
     /********** Step 1 **********/
     // convert 1D data into 2D
@@ -231,13 +241,13 @@ void *CMiner::entry() {
 	dout(0) << "Thread created." << dendl;
 
 	while (1) {
-		mine_lock.Lock();
-		mine_cond.Wait(mine_lock);
+		//mine_lock.Lock();
+		//mine_cond.Wait(mine_lock);
+		sleep(9);
 
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-		if (std::chrono::duration_cast<std::chrono::seconds>(now - last_process_time).count() > 60) {
+		if (balancer->get_beat_epoch() - last_epoch >= 6) {
 			dout(0) << "CMiner start processing." << dendl;
-			last_process_time = now;
+			last_epoch = balancer->get_beat_epoch();
 			process();
 			dout(0) << "CMiner finish processing." << dendl;
 
@@ -261,7 +271,7 @@ void *CMiner::entry() {
 			}
 		}
 
-		mine_lock.Unlock();
+		//mine_lock.Unlock();
 	}
 
 	return nullptr;

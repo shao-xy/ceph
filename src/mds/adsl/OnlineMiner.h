@@ -10,10 +10,12 @@ using std::map;
 
 #include "include/fs_types.h"
 
+class MDBalancer;
+
 class OnlineMiner {
   public:
     // constructor and (virtual) destructor
-    OnlineMiner() {}
+    OnlineMiner(MDBalancer * balancer) : balancer(balancer) {}
     virtual ~OnlineMiner() {}
 
     // this function is called by MDSBalancer::hit_inode()
@@ -26,6 +28,7 @@ class OnlineMiner {
     virtual map<inodeno_t, map<inodeno_t, pair<int, float> > >& get_full_correlated_table() = 0;
 
   protected:
+    MDBalancer * balancer;
     // this function is invoked by the miner thread
     virtual void process() = 0;
 };

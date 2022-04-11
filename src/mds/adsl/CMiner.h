@@ -1,7 +1,9 @@
 // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*-
 // vim: ts=8 sw=2 smarttab
 
-#include <chrono>
+#ifndef _CMINER_H_
+
+#define _CMINER_H_
 
 #include "OnlineMiner.h"
 #include "common/Thread.h"
@@ -10,7 +12,7 @@
 
 class CMiner : public OnlineMiner, public Thread {
   public:
-    CMiner(int am_supp, float am_conf, int m_epoch, int win_size, int m_gap, int m_supp, float m_conf);
+    CMiner(MDBalancer * balancer, int am_supp, float am_conf, int m_epoch, int win_size, int m_gap, int m_supp, float m_conf);
 
     ~CMiner();
 
@@ -51,5 +53,7 @@ class CMiner : public OnlineMiner, public Thread {
 
     void signal_miner(); // use to signal the miner thread
 
-    std::chrono::steady_clock::time_point last_process_time;
+    int last_epoch;
 };
+
+#endif // _CMINER_H_

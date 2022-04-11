@@ -48,7 +48,7 @@ public:
     beat_epoch(0),
     last_epoch_under(0), my_load(0.0), target_load(0.0)
     {
-      miner = new CMiner(10, 0.5, 10, 100, 10, 10, 0.5);
+      miner = new CMiner(this, 10, 0.5, 10, 100, 10, 10, 0.5);
     }
 
   ~MDBalancer() {
@@ -84,6 +84,10 @@ public:
   void maybe_fragment(CDir *dir, bool hot);
 
   void handle_mds_failure(mds_rank_t who);
+
+  int get_beat_epoch() {
+    return beat_epoch;
+  }
 
 private:
   typedef struct {
