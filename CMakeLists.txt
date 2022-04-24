@@ -573,6 +573,12 @@ if(WITH_BOOST_CONTEXT)
   list(APPEND BOOST_COMPONENTS context coroutine)
 endif()
 
+#find_package(Torch REQUIRED)
+# consistent with the same CXX11 ABI defined in TorchConfig.cmake:163
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+endif()
+
 set(Boost_USE_MULTITHREADED ON)
 # require minimally the bundled version
 if(WITH_SYSTEM_BOOST)
