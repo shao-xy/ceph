@@ -135,9 +135,10 @@ bool TorchMatrixFitter::fit(DataChunk<torch::jit::IValue> & _t_datachunk)
 
   // appned more rows?
   if (rows_to_use < CURRENT_MODEL_SIZE_WIDTH_DIR) {
-    torch::Tensor ex_r_t = torch::ones({CURRENT_MODEL_SIZE_WIDTH_DIR - rows_to_use,
-					CURRENT_MODEL_SIZE_HEIGHT_TIME}, torch::kInt32);
-    chunkdata = torch::cat({chunkdata, ex_r_t}, 0);
+    torch::Tensor ex_r_t = torch::ones({CURRENT_MODEL_SIZE_HEIGHT_TIME,
+					CURRENT_MODEL_SIZE_WIDTH_DIR - rows_to_use},
+					torch::kInt32);
+    chunkdata = torch::cat({chunkdata, ex_r_t}, 1);
   }
 #ifdef TORCH_DEBUG_BREAKDOWN
 
@@ -164,8 +165,12 @@ bool TorchMatrixFitter::fit(DataChunk<torch::jit::IValue> & _t_datachunk)
     util::StopWatcher::Trigger t(&v);
 #endif
   // normalize
-  std::tuple<torch::Tensor, torch::Tensor> max_classes = torch::max(chunkdata, 0);
-  max_l = std::get<0>(max_classes);
+  //std::tuple<torch::Tensor, torch::Tensor> max_classes = torch::max(chunkdata, 0);
+  //max_l = std::get<0>(max_classes);
+  //max_classes = torch::max(max_l, 0);
+  //max_l = std::get<0>(max_classes);
+  max_l = torch::ones({1}, torch::kInt32);
+  max_l = max_l * 47990;
   chunkdata = chunkdata / max_l;
 #ifdef TORCH_DEBUG_BREAKDOWN
   }
