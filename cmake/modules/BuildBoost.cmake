@@ -29,7 +29,7 @@ function(do_build_boost version)
   else()
     list(APPEND boost_features "address-model=32")
   endif()
-  set(BOOST_CXXFLAGS "-fPIC -w") # check on arm, etc <---XXX
+  set(BOOST_CXXFLAGS "-fPIC -w -D_GLIBCXX_USE_CXX11_ABI=0") # check on arm, etc <---XXX
   list(APPEND boost_features "cxxflags=${BOOST_CXXFLAGS}")
 
   string(REPLACE ";" "," boost_with_libs "${Boost_BUILD_COMPONENTS}")

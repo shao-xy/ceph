@@ -1,7 +1,3 @@
-set(ENV{Torch_DIR} "/home/ceph/LSTM/libtorch")
-find_package(Torch REQUIRED)
-message(STATUS "PyTorch lib found: ${TORCH_LIBRARIES}")
-
 include(GetGitRevisionDescription)
 
 enable_language(C ASM)
@@ -833,6 +829,9 @@ if (NOT WITH_SYSTEM_ROCKSDB)
   if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
     list(APPEND ROCKSDB_CMAKE_ARGS -DFAIL_ON_WARNINGS=OFF)
   endif()
+
+  # Compatible with global CXX11 ABI for newer versions of GCC
+  list(APPEND ROCKSDB_CMAKE_ARGS -DCMAKE_CXX_FLAGS:="-D_GLIBCXX_USE_CXX11_ABI=0")
 
   # we use an external project and copy the sources to bin directory to ensure
   # that object files are built outside of the source tree.
