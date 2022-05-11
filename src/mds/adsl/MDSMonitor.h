@@ -42,6 +42,8 @@ class MDSMonitor : public Thread {
   public:
     MDSMonitor(MDSRank * mds = NULL);
     ~MDSMonitor();
+
+    int get_iops();
   
     int terminate();
 };

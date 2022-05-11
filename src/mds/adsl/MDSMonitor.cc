@@ -81,6 +81,11 @@ void * MDSMonitor::entry()
   return NULL;
 }
 
+int MDSMonitor::get_iops()
+{
+  return iops_tracer.get();
+}
+
 int MDSMonitor::terminate()
 {
   m_runFlag = false;
@@ -99,7 +104,7 @@ void MDSMonitor::update_and_writelog()
   dout(g_conf->adsl_mds_mon_debug_level)
     << "IOPS " << iops_tracer.get(true) // IOPS
     << " IOPS-CLIENT-REQ " << clientreq_tracer.get(true) // IOPS-CLIENT-REQ
-    << " IOPS-SLAVE-REQ " << clientreq_tracer.get(true) // IOPS-SLAVE-REQ
+    << " IOPS-SLAVE-REQ " << slavereq_tracer.get(true) // IOPS-SLAVE-REQ
     << " Cache-Inodes " << mds->mdcache->lru.lru_get_size() // Cached inodes size
     << " Cache-Inodes-Pinned " << mds->mdcache->lru.lru_get_num_pinned() // Cached inodes pinned
     << " FWPS " << fwps_tracer.get(true) // FWPS

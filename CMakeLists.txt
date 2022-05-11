@@ -573,6 +573,7 @@ if(WITH_BOOST_CONTEXT)
   list(APPEND BOOST_COMPONENTS context coroutine)
 endif()
 
+add_definitions(-DADSLMOD_MDS)
 find_package(Torch REQUIRED)
 # consistent with the same CXX11 ABI defined in TorchConfig.cmake:163
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

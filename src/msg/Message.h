@@ -35,6 +35,10 @@
 #include "common/debug.h"
 #include "common/config.h"
 
+#ifdef ADSLMOD_MDS
+#include "mds/adsl/macroconfig.h"
+#endif
+
 // monitor internal
 #define MSG_MON_SCRUB              64
 #define MSG_MON_ELECTION           65
@@ -168,6 +172,9 @@
 #define MSG_MDS_GATHERCAPS            0x472
 
 #define MSG_MDS_HEARTBEAT          0x500  // for mds load balancer
+#ifdef ADSLMODMDS_BAL_METRIC
+#define MSG_MDS_HEARTBEAT_IOPS     0x501
+#endif
 
 // *** generic ***
 #define MSG_TIMECHECK             0x600

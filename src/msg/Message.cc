@@ -159,6 +159,9 @@ using namespace std;
 #include "messages/MDentryLink.h"
 
 #include "messages/MHeartbeat.h"
+#ifdef ADSLMODMDS_BAL_METRIC
+#include "adsl/messages/MIOPSHeartbeat.h"
+#endif
 
 #include "messages/MMDSTableRequest.h"
 
@@ -735,6 +738,11 @@ Message *decode_message(CephContext *cct, int crcflags,
   case MSG_MDS_HEARTBEAT:
     m = new MHeartbeat();
     break;
+#ifdef ADSLMODMDS_BAL_METRIC
+  case MSG_MDS_HEARTBEAT_IOPS:
+    m = new MIOPSHeartbeat();
+    break;
+#endif
 
   case MSG_MDS_CACHEEXPIRE:
     m = new MCacheExpire();
