@@ -86,7 +86,7 @@ int Predictor::predict(string script_name,
 
 bool Predictor::need_read_rados(string pred_name)
 {
-  return !endswith(pred_name, ".sock") && !endswith(pred_name, ".pt");
+  return endswith(pred_name, ".lua") || endswith(pred_name, ".py");
 }
 
 }; // namespace adsl

@@ -357,6 +357,10 @@ protected:
   adsl::dirfrag_load_t pop_nested;
   adsl::dirfrag_load_t pop_auth_subtree;
   adsl::dirfrag_load_t pop_auth_subtree_nested;
+
+public:
+  adsl::dirfrag_load_t * get_pop_by_name(string name);
+protected:
  
   utime_t last_popularity_sample;
 
