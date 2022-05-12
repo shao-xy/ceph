@@ -216,6 +216,11 @@ double mds_load_t::mds_load()
 #define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".bal "
 namespace adsl {
 
+inline bool dirfrag_load_pred_t::use_parent_fast() {
+  return g_conf->adsl_mds_predictor_use_parent_fast
+    && next_epoch == bal->beat_epoch + 1;
+}
+
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
   if (!dir) return vector<LoadArray_Int>();
@@ -245,40 +250,51 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   if (!dir || !bal)	return 0.0;
 
   // if my parent has been predicted?
-  CInode * in = dir->get_inode();
-  list<CDir*> dfs;
-  in->get_dirfrags(dfs);
-  if ((dfs.size() == 0 || dfs.size() == 1)
-      && in->pred_epoch == bal->beat_epoch
-      && bal->beat_epoch > local_epoch) {
-    _load = in->pred_load;
-    local_epoch = bal->beat_epoch;
-    return _load;
+  if (use_parent_fast()) {
+    return next_load;
   }
 
   if (!predictor) {
     predictor = &bal->predictor;
   }
 
-  if (bal->beat_epoch > local_epoch) {
-    LoadArray_Double predicted;
-    if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
-      return -1.0;
-    }
-    _load = predicted.total();
-    local_epoch = bal->beat_epoch;
-    std::stringstream ss;
-    int idx = 0;
-    for (auto it = predicted.begin();
-	 it != predicted.end();
-	 it++) {
-      //dout(0) << __func__ << " Predicted: " << idx << " -> " << *it << dendl;
-      ss << *it << ' ';
-      pos_map[idx++]->set_pred_load(*it, local_epoch);
-    }
-    dout(0) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
+  LoadArray_Double predicted;
+  if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
+    return -1.0;
   }
-  return _load;
+
+  // set children first
+  std::stringstream ss;
+  int idx = 0;
+  for (auto it = predicted.begin();
+       it != predicted.end();
+       it++) {
+    //dout(0) << __func__ << " Predicted: " << idx << " -> " << *it << dendl;
+    ss << *it << ' ';
+    CInode * in = pos_map[idx++];
+    list<CDir*> dfs;
+    in->get_dirfrags(dfs);
+    if (dfs.size() == 1) {
+      CDir * child_dir = dfs.front();
+      dirfrag_load_t * child_load = child_dir->get_pop_by_name(parent->name);
+      if (child_load) {
+	child_load->pred_load.next_load = *it;
+	child_load->pred_load.next_epoch = bal->beat_epoch + 1;
+      }
+    }
+  }
+  dout(0) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
+
+  // set my predicted load
+  double total_load = predicted.total();
+  if (next_epoch == bal->beat_epoch + 1) {
+    // if execution reaches here, use_parent_fast must be false, we use average of both
+    next_load = (next_load + total_load) / 2;
+  } else {
+    next_load = total_load;
+    next_epoch = bal->beat_epoch + 1;
+  }
+  return next_load;
 }
 
 double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
@@ -530,7 +546,7 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
   {
     string cur_pred = mds->mdsmap->get_predictor();
     use_pred = (cur_pred != "");
-    if (use_pred && pred_version != cur_pred) {
+    if (pred_version != cur_pred) {
       int r = localize_predictor();
       if (r) {
 	mds->clog->warn() << "using old popularity: " << ADSL_METADATA_SYS
@@ -539,7 +555,11 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
 	use_pred = false;
       } else if (mds->get_nodeid() == 0) {
 	/* only spam the cluster log from 1 mds on version changes */
-	mds->clog->info() << ADSL_METADATA_SYS << " predictor version changed: " << pred_version;
+	if (use_pred) {
+	  mds->clog->info() << ADSL_METADATA_SYS << " predictor version changed: " << pred_version;
+	} else {
+	  mds->clog->info() << ADSL_METADATA_SYS << " unset predictor.";
+	}
       }
     }
   }

@@ -88,7 +88,10 @@ std::ostream & operator<<(std::ostream & os, LoadArray<T> & la)
 using LoadArray_Int = LoadArray<int>;
 using LoadArray_Double = LoadArray<double>;
 
+class dirfrag_load_t;
+
 class dirfrag_load_pred_t {
+  dirfrag_load_t * parent;
   CDir * dir;
   MDBalancer * bal;
   map<int, CInode*> pos_map;
@@ -96,33 +99,34 @@ class dirfrag_load_pred_t {
 
   // this functions is defined in MDBalancer.cc
   vector<LoadArray_Int> load_prepare();
+  inline bool use_parent_fast();
 public:
-  double _load;
-  int local_epoch;
+  double next_load;
+  int next_epoch;
 
   dirfrag_load_pred_t() {}
-  explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal)
-    : dir(dir), bal(bal) {}
+  explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal, dirfrag_load_t * parent = NULL)
+    : parent(parent), dir(dir), bal(bal) {}
   void encode(bufferlist &bl) const;
   void decode(bufferlist::iterator &p);
   void adjust(double d) {
-    _load += d;
+    next_load += d;
   }
   void zero() {
-    _load = 0;
+    next_load = 0;
   }
 
   // this functions is defined in MDBalancer.cc
   double meta_load(Predictor * predictor = NULL);
 
   void add(dirfrag_load_pred_t& r) {
-    _load += r._load;
+    next_load += r.next_load;
   }
   void sub(dirfrag_load_pred_t& r) {
-    _load -= r._load;
+    next_load -= r.next_load;
   }
   void scale(double f) {
-    _load *= f;
+    next_load *= f;
   }
 };
 
@@ -136,9 +140,10 @@ public:
   dirfrag_load_vec_t decay_load;
   dirfrag_load_pred_t pred_load;
   bool use_pred;
+  string name; // this field is left as empty string after (de)serialization
 
   dirfrag_load_t() {}
-  explicit dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal);
+  explicit dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal, string name = "");
 
   void encode(bufferlist &bl) const {
     ENCODE_START(2, 2, bl);

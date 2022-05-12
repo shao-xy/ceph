@@ -4,8 +4,8 @@
 
 namespace adsl {
 
-dirfrag_load_t::dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal)
-    : decay_load(now), pred_load(dir, bal) {}
+dirfrag_load_t::dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal, string name)
+    : decay_load(now), pred_load(dir, bal, this), name(name) {}
 
 void dirfrag_load_t::dump(Formatter *f) const
 {
@@ -15,12 +15,12 @@ void dirfrag_load_t::dump(Formatter *f) const
 }
 
 void dirfrag_load_pred_t::encode(bufferlist &bl) const {
-  ::encode(_load, bl);
-  ::encode(local_epoch, bl);
+  ::encode(next_load, bl);
+  ::encode(next_epoch, bl);
 }
 void dirfrag_load_pred_t::decode(bufferlist::iterator &p) {
-  ::decode(_load, p);
-  ::decode(local_epoch, p);
+  ::decode(next_load, p);
+  ::decode(next_epoch, p);
 }
 
 };
