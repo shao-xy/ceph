@@ -88,6 +88,17 @@ std::ostream & operator<<(std::ostream & os, LoadArray<T> & la)
 using LoadArray_Int = LoadArray<int>;
 using LoadArray_Double = LoadArray<double>;
 
+class dirfrag_load_pred_t;
+
+class PredInputLoad {
+public:
+  dirfrag_load_pred_t * dirfrag;
+  vector<LoadArray_Int> cur_loads;
+
+  PredInputLoad(dirfrag_load_pred_t * dirfrag = NULL) :
+    dirfrag(dirfrag) {}
+};
+
 class dirfrag_load_t;
 
 class dirfrag_load_pred_t {
@@ -95,10 +106,9 @@ class dirfrag_load_pred_t {
   CDir * dir;
   MDBalancer * bal;
   map<int, CInode*> pos_map;
-  vector<LoadArray_Int> load_matrix;
 
   // this functions is defined in MDBalancer.cc
-  vector<LoadArray_Int> load_prepare();
+  PredInputLoad load_prepare();
   inline bool use_parent_fast();
 public:
   double next_load;

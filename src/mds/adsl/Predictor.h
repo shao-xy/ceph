@@ -23,8 +23,14 @@ public:
   ~Predictor();
   int predict(string script_name,
 	      boost::string_view script,
-	      vector<LoadArray_Int> cur_loads,
+	      PredInputLoad & input_load,
 	      LoadArray_Double &pred_load);
+  int predict(string script_name,
+	      boost::string_view script,
+	      PredInputLoad && input_load,
+	      LoadArray_Double &pred_load) {
+    return predict(script_name, script, input_load, pred_load);
+  }
   static bool need_read_rados(string pred_name);
 };
 
@@ -34,9 +40,9 @@ public:
   PredictorImpl() {}
   virtual ~PredictorImpl() {}
 protected:
-  virtual int predict(boost::string_view script,
-		      vector<LoadArray_Int> &cur_loads,
-		      LoadArray_Double &pred_load) = 0;
+  virtual int do_predict(boost::string_view script,
+			 PredInputLoad &input_load,
+			 LoadArray_Double &pred_load) = 0;
 };
 
 }; // namespace adsl

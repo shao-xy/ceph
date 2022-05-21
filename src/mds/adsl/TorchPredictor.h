@@ -16,7 +16,12 @@ class TorchPredictor : public PredictorImpl {
     bool load_model(string path);
     int predict(boost::string_view script,
                 vector<LoadArray_Int> &cur_loads,
-                LoadArray_Double &pred_load) override;
+                LoadArray_Double &pred_load);
+    int do_predict(boost::string_view script,
+		   PredInputLoad &input_load,
+		   LoadArray_Double &pred_load) override {
+      return predict(script, input_load.cur_loads, pred_load);
+    }
 
   protected:
     string last_pred_name;

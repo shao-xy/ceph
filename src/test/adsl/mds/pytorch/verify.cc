@@ -22,6 +22,7 @@
 #define CURRENT_MODEL_SIZE_WIDTH_DIR 2258
 
 using adsl::Predictor;
+using adsl::PredInputLoad;
 using adsl::LoadArray_Int;
 using adsl::LoadArray_Double;
 
@@ -126,7 +127,8 @@ void test_predictor()
 {
   LoadInjector inj(TRACE_FILE);
   LoadRecorder rec(PREDICTED_FILE);
-  vector<LoadArray_Int> loads;
+  PredInputLoad input_load;
+  vector<LoadArray_Int> & loads = input_load.cur_loads;
   LoadArray_Double pred_load;
   Predictor p;
 
@@ -148,7 +150,7 @@ void test_predictor()
 
   int cnt = 1;
   do {
-    p.predict("/home/ceph/LSTM/torch_test/mds-web-script.pt", "", loads, pred_load);
+    p.predict("/home/ceph/LSTM/torch_test/mds-web-script.pt", "", input_load, pred_load);
     dout(0) << __func__ << "  current:" << cnt++ << dendl;
     rec.record(pred_load);
   } while (inj.readline(loads));

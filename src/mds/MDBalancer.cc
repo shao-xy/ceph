@@ -221,11 +221,12 @@ inline bool dirfrag_load_pred_t::use_parent_fast() {
     && next_epoch == bal->beat_epoch + 1;
 }
 
-vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
+PredInputLoad dirfrag_load_pred_t::load_prepare()
 {
-  if (!dir) return vector<LoadArray_Int>();
+  PredInputLoad input_load(this);
+  if (!dir) return input_load;
 
-  load_matrix.clear();
+  vector<LoadArray_Int> & load_matrix = input_load.cur_loads;
   int idx = 0;
   for (auto it = dir->begin();
        it != dir->end();
@@ -243,7 +244,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
     }
   }
 
-  return load_matrix;
+  return input_load;
 }
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor) {

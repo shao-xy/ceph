@@ -18,6 +18,7 @@ add_library(mds-adsl STATIC
   SocketPredictor.cc
   TorchPredictor.cc
   MatrixFitter.cc
+  CMinerPredictor.cc
 )
 target_include_directories(mds-adsl PRIVATE "${Python3_INCLUDE_DIRS}")
 target_link_libraries(mds-adsl liblua common "${TORCH_LIBRARIES}" adsl)

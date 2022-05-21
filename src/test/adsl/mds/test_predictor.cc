@@ -9,6 +9,7 @@
 #include "mds/adsl/Predictor.h"
 
 using adsl::Predictor;
+using adsl::PredInputLoad;
 using adsl::LoadArray_Int;
 using adsl::LoadArray_Double;
 
@@ -95,11 +96,11 @@ void test_predictor()
 {
 	// init
 	Predictor p;
-	vector<LoadArray_Int> loads;
+	PredInputLoad loads;
 	LoadArray_Double pred_load;
 
 	// prepare data
-	init_data(loads);
+	init_data(loads.cur_loads);
 
 	//std::cout << p.predict(lua_test_code1, loads, pred_load) << std::endl;
 	//p.predict("test.lua", lua_test_code1, loads, pred_load);

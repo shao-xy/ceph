@@ -22,10 +22,16 @@ class SocketPredictor : public PredictorImpl {
 
     int connect(string addr, int port = DEFAULT_PORT);
 
-  protected:
+  public:
     int predict(boost::string_view script,
-		      vector<LoadArray_Int> &cur_loads,
-		      LoadArray_Double &pred_load) override;
+		vector<LoadArray_Int> &cur_loads,
+		LoadArray_Double &pred_load);
+    int do_predict(boost::string_view script,
+		   PredInputLoad &input_load,
+		   LoadArray_Double &pred_load) override {
+      return predict(script, input_load.cur_loads, pred_load);
+    }
+
 };
 
 }; // namespace adsl

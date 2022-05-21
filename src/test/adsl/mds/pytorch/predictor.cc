@@ -13,6 +13,7 @@
 //#define dout_prefix
 
 using adsl::Predictor;
+using adsl::PredInputLoad;
 using adsl::LoadArray_Int;
 using adsl::LoadArray_Double;
 
@@ -29,11 +30,11 @@ void test_predictor()
 {
 	// init
 	Predictor p;
-	vector<LoadArray_Int> loads;
+	PredInputLoad loads;
 	LoadArray_Double pred_load;
 
 	// prepare data
-	init_data(loads);
+	init_data(loads.cur_loads);
 
 	using timepoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
 	constexpr auto now = std::chrono::high_resolution_clock::now;

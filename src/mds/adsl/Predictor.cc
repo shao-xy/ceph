@@ -49,7 +49,7 @@ Predictor::~Predictor()
 
 int Predictor::predict(string script_name,
 		       boost::string_view script,
-		       vector<LoadArray_Int> cur_loads,
+		       PredInputLoad & input_load,
 		       LoadArray_Double &pred_load)
 {
   PredictorImpl * impl = 0;
@@ -77,11 +77,11 @@ int Predictor::predict(string script_name,
 	impl = NULL;
       }
     }
-  }  else if (endswith(script_name, ".pt")) {
+  } else if (endswith(script_name, ".pt")) {
     impl = static_cast<TorchPredictor*>(torch_impl)->load_model(script_name) ? torch_impl : NULL;
-  } 
+  }
 
-  return impl ? impl->predict(script, cur_loads, pred_load) : -EINVAL;
+  return impl ? impl->do_predict(script, input_load, pred_load) : -EINVAL;
 }
 
 bool Predictor::need_read_rados(string pred_name)
