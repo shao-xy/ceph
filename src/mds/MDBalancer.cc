@@ -145,6 +145,7 @@ void MDBalancer::handle_export_pins(void)
   }
 }
 
+/*
 void MDBalancer::print_IOPS(CInode *inode) {
   if (!inode)	return;
 
@@ -173,6 +174,7 @@ void MDBalancer::print_IOPS(CInode *inode) {
     }
   }
 }
+*/
 
 void MDBalancer::tick()
 {

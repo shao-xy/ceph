@@ -102,6 +102,7 @@ public:
 class dirfrag_load_t;
 
 class dirfrag_load_pred_t {
+public:
   dirfrag_load_t * parent;
   CDir * dir;
   MDBalancer * bal;
@@ -110,7 +111,6 @@ class dirfrag_load_pred_t {
   // this functions is defined in MDBalancer.cc
   PredInputLoad load_prepare();
   inline bool use_parent_fast();
-public:
   double next_load;
   int next_epoch;
 

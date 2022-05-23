@@ -27,7 +27,7 @@ using std::map;
 #include "common/Cond.h"
 
 #include "adsl/Predictor.h"
-#include "mds/adsl/ReqTracer.h"
+//#include "mds/adsl/ReqTracer.h"
 #include "mds/adsl/CMiner.h"
 
 class MDSRank;
@@ -168,6 +168,7 @@ public:
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
 
+  void print_IOPS(CInode *inode);
   double calc_mds_load(mds_load_t load, bool auth = false);
   
   OnlineMiner * miner;
