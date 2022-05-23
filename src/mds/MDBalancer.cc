@@ -145,6 +145,35 @@ void MDBalancer::handle_export_pins(void)
   }
 }
 
+void MDBalancer::print_IOPS(CInode *inode) {
+  if (!inode)	return;
+
+  std::string s;
+  inode->make_path_string(s);
+  if (s == "")	s = "/";
+
+  int depth_count = 0;
+  for (auto &c : s) {
+    if (c == '/') {
+      depth_count++;
+    }
+  }
+  
+  inode->maybe_update_epoch(beat_epoch);
+  // if (depth_count == 2 && s.find("/ai") != std::string::npos) {
+  dout(0) << " epoch: " << inode->beat_epoch << " inode: " << inode->ino() << " path: " << s << " IOPS: " << inode->single_epoch_hit << dendl;
+  // }
+  inode->single_epoch_hit = 0;
+
+  std::list<CDir*> subtrees;
+  inode->get_dirfrags(subtrees);
+  for (CDir *subtree : subtrees) {
+    for (auto it = subtree->items.begin(); it != subtree->items.end(); it++) {
+      print_IOPS(it->second->get_linkage()->get_inode());
+    }
+  }
+}
+
 void MDBalancer::tick()
 {
   static int num_bal_times = g_conf->mds_bal_max;
@@ -161,6 +190,17 @@ void MDBalancer::tick()
   if ((double)now - (double)last_sample > g_conf->mds_bal_sample_interval) {
     dout(15) << "tick last_sample now " << now << dendl;
     last_sample = now;
+  }
+
+  set<CDir *> authsubs;
+  mds->mdcache->get_auth_subtrees(authsubs);
+
+  for (auto &cd : authsubs) {
+    for (auto &it : cd->items) {
+      CDentry::linkage_t * linkage = it.second->get_linkage();
+
+      // print_IOPS(linkage->get_inode());
+    }
   }
 
   // balance?

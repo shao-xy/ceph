@@ -65,11 +65,11 @@ void CMiner::process(){
     input_lock.unlock();
 
 	// print debug info
-	std::stringstream debug_out;
-	for (auto &inode : temp_input) {
-		debug_out << inode << " ";
-	}
-	dout(0) << "PROCESS VECTOR: " << debug_out.str() << dendl;
+	// std::stringstream debug_out;
+	// for (auto &inode : temp_input) {
+	//	debug_out << inode << " ";
+	//}
+	// dout(0) << "PROCESS VECTOR: " << debug_out.str() << dendl;
 
     /********** Step 1 **********/
     // convert 1D data into 2D
@@ -245,7 +245,7 @@ void *CMiner::entry() {
 		//mine_cond.Wait(mine_lock);
 		sleep(9);
 
-		if (balancer->get_beat_epoch() - last_epoch >= 6) {
+		if (balancer->get_beat_epoch() - last_epoch >= 6 * 3) {
 			dout(0) << "CMiner start processing." << dendl;
 			last_epoch = balancer->get_beat_epoch();
 			process();

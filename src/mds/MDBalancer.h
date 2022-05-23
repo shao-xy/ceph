@@ -48,7 +48,7 @@ public:
     beat_epoch(0),
     last_epoch_under(0), my_load(0.0), target_load(0.0)
     {
-      miner = new CMiner(this, 10, 0.5, 10, 100, 10, 10, 0.5);
+      miner = new CMiner(this, 10, 0.5, 30, 150, 20, 10, 0.5);
     }
 
   ~MDBalancer() {

@@ -3000,8 +3000,9 @@ void Server::handle_client_getattr(MDRequestRef& mdr, bool is_lookup)
   set<SimpleLock*> rdlocks, wrlocks, xlocks;
 
   // used for cminer
-  mds->balancer->miner->hit(req->get_filepath().get_ino());
-
+  // mds->balancer->miner->hit(req->get_filepath().get_ino());
+  // dout(0) << "request-hit-log handle_client_getattr req.path: " << req->get_filepath() << " " << req->get_filepath().get_ino() << dendl;
+  
   if (req->get_filepath().depth() == 0 && is_lookup) {
     // refpath can't be empty for lookup but it can for
     // getattr (we do getattr with empty refpath for mount of '/')
@@ -3011,6 +3012,10 @@ void Server::handle_client_getattr(MDRequestRef& mdr, bool is_lookup)
 
   CInode *ref = rdlock_path_pin_ref(mdr, 0, rdlocks, false, false, NULL, !is_lookup);
   if (!ref) return;
+
+  // used for cminer
+  mds->balancer->miner->hit(ref->ino());
+  // dout(0) << "request-hit-log handle_client_getattr ref.ino: " << ref->ino() << dendl;
 
   /*
    * if client currently holds the EXCL cap on a field, do not rdlock
@@ -3092,6 +3097,7 @@ void Server::handle_client_lookup_ino(MDRequestRef& mdr,
   inodeno_t ino = req->get_filepath().get_ino();
 
   mds->balancer->miner->hit(ino);
+  // dout(0) << "request-hit-log handle_client_lookup_ino : " << ino << dendl;
 
   CInode *in = mdcache->get_inode(ino);
   if (in && in->state_test(CInode::STATE_PURGING)) {
@@ -3209,6 +3215,7 @@ void Server::handle_client_open(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  // dout(0) << "request-hit-log handle_client_open : " << req->get_filepath().get_ino() << dendl;
 
   int flags = req->head.args.open.flags;
   int cmode = ceph_flags_to_mode(flags);
@@ -3556,6 +3563,7 @@ void Server::handle_client_openc(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(inodeno_t(req->head.ino));
+  // dout(0) << "request-hit-log handle_client_openc : " << inodeno_t(req->head.ino) << dendl;
 
   // it's a file.
   dn->push_projected_linkage(in);
@@ -3619,6 +3627,8 @@ void Server::handle_client_readdir(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_readdir : " << req->get_filepath().get_ino() << dendl;
+  //dout(0) << "request-hit-log handle_client_readdir req : " << *req << dendl; 
 
   CInode *diri = rdlock_path_pin_ref(mdr, 0, rdlocks, false, true);
   if (!diri) return;
@@ -3899,6 +3909,7 @@ void Server::handle_client_file_setlock(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_file_setlock : " << req->get_filepath().get_ino() << dendl;
 
   // get the inode to operate on, and set up any locks needed for that
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true);
@@ -4003,6 +4014,7 @@ void Server::handle_client_file_readlock(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_file_readlock : " << req->get_filepath().get_ino() << dendl;
 
   // get the inode to operate on, and set up any locks needed for that
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true);
@@ -4059,6 +4071,8 @@ void Server::handle_client_setattr(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_setattr : " << req->get_filepath().get_ino() << dendl;
+  
 
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true);
   if (!cur) return;
@@ -4260,6 +4274,7 @@ void Server::handle_client_setlayout(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_setlayout : " << req->get_filepath().get_ino() << dendl;
 
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true);
   if (!cur) return;
@@ -4351,6 +4366,7 @@ void Server::handle_client_setdirlayout(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_setdirlayout : " << req->get_filepath().get_ino() << dendl;
 
   file_layout_t *dir_layout = NULL;
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true, false, &dir_layout);
@@ -4847,6 +4863,8 @@ void Server::handle_client_setxattr(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_setxattr : " << req->get_filepath().get_ino() << dendl;
+
 
   CInode *cur;
 
@@ -4948,6 +4966,7 @@ void Server::handle_client_removexattr(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_removexattr : " << req->get_filepath().get_ino() << dendl;
 
   file_layout_t *dir_layout = NULL;
   CInode *cur;
@@ -5098,6 +5117,7 @@ void Server::handle_client_mknod(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(inodeno_t(req->head.ino));
+  //dout(0) << "request-hit-log handle_client_mknod : " << inodeno_t(req->head.ino) << dendl;
 
   dn->push_projected_linkage(newi);
 
@@ -5187,6 +5207,7 @@ void Server::handle_client_mkdir(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(inodeno_t(req->head.ino));
+  //dout(0) << "request-hit-log handle_client_mkdir : " << inodeno_t(req->head.ino) << dendl;
 
   // it's a directory.
   dn->push_projected_linkage(newi);
@@ -5266,6 +5287,7 @@ void Server::handle_client_symlink(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(inodeno_t(req->head.ino));
+  //dout(0) << "request-hit-log handle_client_symlink : " << inodeno_t(req->head.ino) << dendl;
 
   // it's a symlink
   dn->push_projected_linkage(newi);
@@ -5303,6 +5325,7 @@ void Server::handle_client_link(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_link : " << req->get_filepath().get_ino() << dendl;
 
   dout(7) << "handle_client_link " << req->get_filepath()
 	  << " to " << req->get_filepath2()
@@ -6570,6 +6593,7 @@ void Server::handle_client_rename(MDRequestRef& mdr)
 
   // used for cminer
   mds->balancer->miner->hit(req->get_filepath().get_ino());
+  //dout(0) << "request-hit-log handle_client_rename : " << req->get_filepath().get_ino() << dendl;
 
   filepath destpath = req->get_filepath();
   filepath srcpath = req->get_filepath2();
