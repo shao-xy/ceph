@@ -18,11 +18,20 @@ using adsl::LoadArray_Double;
 
 void init_data(vector<LoadArray_Int> &loads)
 {
-	loads.push_back(LoadArray_Int(vector<int>{1,2,3,4,5}));
-	loads.push_back(LoadArray_Int(vector<int>{1,1,3,3,4}));
-	loads.push_back(LoadArray_Int(vector<int>{0,2,1,4,5}));
-	loads.push_back(LoadArray_Int(vector<int>{1,7,6,3,5}));
-	loads.push_back(LoadArray_Int(vector<int>{3,5,3,1,1}));
+	//loads.push_back(LoadArray_Int(vector<int>{1000,2000,3000,4000,5000}));
+	//loads.push_back(LoadArray_Int(vector<int>{1,1,3,3,4}));
+	//loads.push_back(LoadArray_Int(vector<int>{0,2,1,4,5}));
+	//loads.push_back(LoadArray_Int(vector<int>{1,7,6,3,5}));
+	//loads.push_back(LoadArray_Int(vector<int>{3,5,3,1,1}));
+	loads.push_back(LoadArray_Int(vector<int>(48, 2000)));
+}
+
+void init_data_2(vector<LoadArray_Int> &loads)
+{
+	loads.clear();
+	for (int i = 0; i < 2258; i++) {
+		loads.push_back(LoadArray_Int(vector<int>(48, 15625)));
+	}
 }
 
 void test_predictor()
@@ -33,7 +42,8 @@ void test_predictor()
 	LoadArray_Double pred_load;
 
 	// prepare data
-	init_data(loads);
+	//init_data(loads);
+	init_data_2(loads);
 
 	using timepoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
 	constexpr auto now = std::chrono::high_resolution_clock::now;

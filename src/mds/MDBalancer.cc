@@ -212,13 +212,34 @@ double mds_load_t::mds_load()
   return 0;
 }
 
+#undef dout_subsys
+#define dout_subsys ceph_subsys_mds_predictor
 #undef dout_prefix
-#define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".bal "
+#define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".predictor "
+#undef dout
+#define dout(lvl) \
+  do {\
+    auto subsys = ceph_subsys_mds;\
+    if ((dout_context)->_conf->subsys.should_gather(ceph_subsys_mds_predictor, lvl)) {\
+      subsys = ceph_subsys_mds_predictor;\
+    }\
+    dout_impl(dout_context, subsys, lvl) dout_prefix
+#undef dendl
+#define dendl dendl_impl; } while (0)
 namespace adsl {
+
+std::ostream& dirfrag_load_pred_t::print(std::ostream& out)
+{
+  if (dir) {
+    return out << '[' << dir->get_path() << " (" << cur_load << ',' << cur_epoch << ")/(" << predicted_load << ',' << predicted_epoch << ")]";
+  } else {
+    return out << "[ NULLPTR (" << cur_load << ',' << cur_epoch << ")/(" << predicted_load << ',' << predicted_epoch << ")]";
+  }
+}
 
 inline bool dirfrag_load_pred_t::use_parent_fast() {
   return g_conf->adsl_mds_predictor_use_parent_fast
-    && next_epoch == bal->beat_epoch + 1;
+    && cur_epoch == bal->beat_epoch;
 }
 
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
@@ -246,22 +267,49 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   return load_matrix;
 }
 
-double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
-  if (!dir || !bal)	return 0.0;
-
-  // if my parent has been predicted?
-  if (use_parent_fast()) {
-    return next_load;
+void dirfrag_load_pred_t::force_current_epoch() {
+  if (!bal)	return;
+  if (cur_epoch != bal->beat_epoch) {
+    cur_load = (!dir || do_predict(&bal->predictor) < 0) ? 0.0 : predicted_load;
+    cur_epoch = bal->beat_epoch;
   }
+}
+
+int dirfrag_load_pred_t::do_predict(Predictor * predictor) {
+  dout(15) << __func__ << " dir " << dir << " bal " << bal << dendl;
+  if (!dir) {
+    dout(15) << __func__ << " fail: nullptr dir " << dir << " bal " << bal << dendl;
+    return -1;
+  }
+
+  dout(15) << __func__ << " mark #1" << dendl;
+
+  if (!bal) {
+    dout(0) << __func__ << " fail: no balancer t for dir " << dir->get_path() << dendl;
+    return -1;
+  }
+
+  dout(15) << __func__ << " mark #2" << dendl;
+
+  if (predicted_epoch == bal->beat_epoch) {
+    // already predicted?
+    return predicted_load;
+  }
+
+  dout(15) << __func__ << " mark #3" << dendl;
 
   if (!predictor) {
     predictor = &bal->predictor;
   }
 
+  dout(15) << __func__ << " mark #4" << dendl;
+
   LoadArray_Double predicted;
   if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
-    return -1.0;
+    return -1;
   }
+
+  dout(15) << __func__ << " mark #5" << dendl;
 
   // set children first
   std::stringstream ss;
@@ -269,7 +317,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   for (auto it = predicted.begin();
        it != predicted.end();
        it++) {
-    //dout(0) << __func__ << " Predicted: " << idx << " -> " << *it << dendl;
+    dout(15) << __func__ << " Predicting child: " << idx << " -> " << *it << dendl;
     ss << *it << ' ';
     CInode * in = pos_map[idx++];
     list<CDir*> dfs;
@@ -278,23 +326,48 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
       CDir * child_dir = dfs.front();
       dirfrag_load_t * child_load = child_dir->get_pop_by_name(parent->name);
       if (child_load) {
-	child_load->pred_load.next_load = *it;
-	child_load->pred_load.next_epoch = bal->beat_epoch + 1;
+	child_load->pred_load.cur_load = *it;
+	child_load->pred_load.cur_epoch = bal->beat_epoch;
       }
     }
   }
-  dout(0) << __func__ << " Predicted: [" << ss.str() << "] " << dendl;
+
+  dout(15) << __func__ << " mark #6" << dendl;
 
   // set my predicted load
-  double total_load = predicted.total();
-  if (next_epoch == bal->beat_epoch + 1) {
-    // if execution reaches here, use_parent_fast must be false, we use average of both
-    next_load = (next_load + total_load) / 2;
-  } else {
-    next_load = total_load;
-    next_epoch = bal->beat_epoch + 1;
+  predicted_load = predicted.total();
+  predicted_epoch = bal->beat_epoch;
+  //dout(15) << __func__ << " Before end." << dendl;
+  dout(10) << __func__ << " CDir path: " << dir->get_path() << " (" << predicted_load << ',' << predicted_epoch << ") [" << ss.str() << "] " << dendl;
+
+  return 0;
+}
+
+double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
+  // if my parent has been predicted?
+  if (use_parent_fast()) {
+    return cur_load;
   }
-  return next_load;
+
+  if (do_predict(predictor) < 0) {
+    if (cur_epoch == bal->beat_epoch) {
+      dout(5) << __func__ << " Cannot predict. Using expected load value: " << cur_load << dendl;
+      return cur_load;
+    } else {
+      return 0.0;
+    }
+  }
+
+  if (cur_epoch == bal->beat_epoch) {
+    // if execution reaches here, use_parent_fast must be false, we use average of both
+    // NOTE: we don't care if value of cur_load is changed (add/sub/scale)
+    cur_load = (cur_load + predicted_load) / 2;
+  } else {
+    cur_load = predicted_load;
+    cur_epoch = bal->beat_epoch;
+  }
+  dout(5) << __func__ << " dir " << dir->get_path() << " cur_load " << cur_load << dendl;
+  return cur_load;
 }
 
 double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
@@ -307,12 +380,25 @@ double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
 
 };
 
+#undef dout_subsys
+#define dout_subsys ceph_subsys_mds
 #undef dout_prefix
 #define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".bal "
+#undef dout
+#define dout(lvl) \
+  do {\
+    auto subsys = ceph_subsys_mds;\
+    if ((dout_context)->_conf->subsys.should_gather(ceph_subsys_mds_balancer, lvl)) {\
+      subsys = ceph_subsys_mds_balancer;\
+    }\
+    dout_impl(dout_context, subsys, lvl) dout_prefix
+#undef dendl
+#define dendl dendl_impl; } while (0)
 
 mds_load_t MDBalancer::get_load(utime_t now)
 {
   mds_load_t load(now, this);
+  dout(15) << "MDBalancer::" << __func__ << " Initially " << load.auth << dendl;
 
   if (mds->mdcache->get_root()) {
     list<CDir*> ls;
@@ -322,6 +408,7 @@ mds_load_t MDBalancer::get_load(utime_t now)
 	 ++p) {
       load.auth.add(now, mds->mdcache->decayrate, (*p)->pop_auth_subtree_nested);
       load.all.add(now, mds->mdcache->decayrate, (*p)->pop_nested);
+      dout(15) << "MDBalancer::" << __func__ << " After add " << load.auth << dendl;
     }
   } else {
     dout(20) << "get_load no root, no load" << dendl;
@@ -535,7 +622,9 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
 
   {
     // set mds_load[who]
-    mds_load_map_t::value_type val(who, m->get_load());
+    mds_load_t & l = m->get_load();
+    l.set_balancer(this);
+    mds_load_map_t::value_type val(who, l);
     pair < mds_load_map_t::iterator, bool > rval (mds_load.insert(val));
     if (!rval.second) {
       rval.first->second = val.second;
@@ -783,10 +872,20 @@ void MDBalancer::prep_rebalance(int beat)
 
     double total_load = 0.0;
     multimap<double,mds_rank_t> load_map;
+
+    dout(15) << "SXY dump load map:" << dendl;
+    for (mds_rank_t i=mds_rank_t(0); i < mds_rank_t(cluster_size); i++) {
+      mds_load_t &load = mds_load[i];
+      adsl::dirfrag_load_pred_t & pred_load = load.auth.pred_load;
+      dout(15) << "  MDS rank " << i << " pred_load [dir=" << pred_load.get_dir() << ",bal=" << pred_load.get_balancer() << "] " << pred_load << dendl;
+    }
+
     for (mds_rank_t i=mds_rank_t(0); i < mds_rank_t(cluster_size); i++) {
       map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now(), this));
       std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
       mds_load_t &load(r.first->second);
+
+      dout(15) << " SXY show MDS load rank=" << i << " load=" << load << dendl;
 
       double l = load.mds_load() * load_fac;
       mds_meta_load[i] = l;

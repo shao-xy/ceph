@@ -183,7 +183,7 @@ bool TorchMatrixFitter::fit(DataChunk<torch::jit::IValue> & _t_datachunk)
 #ifdef TORCH_DEBUG_BREAKDOWN
   }
 #endif
-  predictor_dout(10) << "Final shape: " << chunkdata.sizes() << predictor_dendl;
+  predictor_dout(15) << "Final shape: " << chunkdata.sizes() << predictor_dendl;
 
   // Fill chunk struct
   _t_datachunk.set(chunkdata, rows_to_use, max_l);

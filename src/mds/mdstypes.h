@@ -1555,6 +1555,12 @@ struct mds_load_t {
   explicit mds_load_t(const utime_t &t, MDBalancer * bal = NULL) : auth(t, NULL, bal), all(t, NULL, bal) {}
   // mostly for the dencoder infrastructure
   mds_load_t() : auth(), all() {}
+  void set_balancer(MDBalancer * bal) {
+    // invoked by MDBalancer::handle_heartbeat
+    // set bal pointers in dirfrag_load_t
+    auth.set_balancer(bal);
+    all.set_balancer(bal);
+  }
   
   double mds_load();  // defiend in MDBalancer.cc
   void encode(bufferlist& bl) const;

@@ -15,12 +15,16 @@ void dirfrag_load_t::dump(Formatter *f) const
 }
 
 void dirfrag_load_pred_t::encode(bufferlist &bl) const {
-  ::encode(next_load, bl);
-  ::encode(next_epoch, bl);
+  ::encode(predicted_load, bl);
+  ::encode(predicted_epoch, bl);
+  ::encode(cur_load, bl);
+  ::encode(cur_epoch, bl);
 }
 void dirfrag_load_pred_t::decode(bufferlist::iterator &p) {
-  ::decode(next_load, p);
-  ::decode(next_epoch, p);
+  ::decode(predicted_load, p);
+  ::decode(predicted_epoch, p);
+  ::decode(cur_load, p);
+  ::decode(cur_epoch, p);
 }
 
 };

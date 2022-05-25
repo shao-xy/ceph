@@ -14,11 +14,12 @@ using std::vector;
 #include <numeric>
 
 #include "include/encoding.h"
+#include "common/Mutex.h"
 
 // NEVER include this file directly
 // here are some lines to be injected into mds/mdstypes.h
 
-#define ADSL_METADATA_SYS "M4"
+#define ADSL_METADATA_SYS "MOIST"
 
 //#define RECENT_LOAD_EPOCH_LENGTH 10
 #define RECENT_LOAD_EPOCH_LENGTH 48
@@ -101,34 +102,58 @@ class dirfrag_load_pred_t {
   vector<LoadArray_Int> load_prepare();
   inline bool use_parent_fast();
 public:
-  double next_load;
-  int next_epoch;
+  double predicted_load;
+  int predicted_epoch;
+  double cur_load;
+  int cur_epoch;
 
-  dirfrag_load_pred_t() {}
+  dirfrag_load_pred_t() : dirfrag_load_pred_t(NULL, NULL) {}
   explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal, dirfrag_load_t * parent = NULL)
-    : parent(parent), dir(dir), bal(bal) {}
+    : parent(parent), dir(dir), bal(bal),
+      predicted_load(0.0), predicted_epoch(-1),
+      cur_load(0.0), cur_epoch(-1) {}
   void encode(bufferlist &bl) const;
   void decode(bufferlist::iterator &p);
   void adjust(double d) {
-    next_load += d;
+    force_current_epoch();
+    cur_load += d;
   }
   void zero() {
-    next_load = 0;
+    force_current_epoch();
+    cur_load = 0;
   }
 
-  // this functions is defined in MDBalancer.cc
+
+  // these functions are defined in MDBalancer.cc
+  // TODO: This function is NOT protected by async locks. We might fix this in the future.
+  void force_current_epoch();
+  int do_predict(Predictor * predictor);
   double meta_load(Predictor * predictor = NULL);
 
   void add(dirfrag_load_pred_t& r) {
-    next_load += r.next_load;
+    force_current_epoch();
+    r.force_current_epoch();
+    cur_load += r.cur_load;
   }
   void sub(dirfrag_load_pred_t& r) {
-    next_load -= r.next_load;
+    force_current_epoch();
+    r.force_current_epoch();
+    cur_load -= r.cur_load;
   }
   void scale(double f) {
-    next_load *= f;
+    force_current_epoch();
+    cur_load *= f;
   }
+  CDir * get_dir() { return dir; }
+  MDBalancer * get_balancer() { return bal; }
+  inline void set_balancer(MDBalancer * bal) { this->bal = bal; }
+  inline void set_parent(dirfrag_load_t * parent) { this->parent = parent; }
+  std::ostream& print(std::ostream& out);
 };
+inline std::ostream& operator<<(std::ostream& out, dirfrag_load_pred_t& dlp)
+{
+  return dlp.print(out);
+}
 
 };
 
@@ -156,6 +181,7 @@ public:
     DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, bl);
     ::decode(decay_load, now, bl);
     ::decode(pred_load, bl);
+    pred_load.set_parent(this);
     ::decode(use_pred, bl);
     DECODE_FINISH(bl);
   }
@@ -192,10 +218,11 @@ public:
     decay_load.scale(f);
     pred_load.scale(f);
   }
+  inline void set_balancer(MDBalancer * bal) { pred_load.set_balancer(bal); }
 };
 inline std::ostream& operator<<(std::ostream& out, dirfrag_load_t& dl)
 {
-  return out << "{" << dl.decay_load << ", " << "UNIMPLEMENTED" << "}";
+  return out << "{" << dl.decay_load << ", " << dl.pred_load << "}";
 }
 
 };

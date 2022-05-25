@@ -61,7 +61,7 @@ int TorchPredictor::predict(boost::string_view script,
     fitter.place_result(chunk, output, pred_load);
     predictor_dout(20) << " after place_result, pred_load " << pred_load << predictor_dendl;
   }
-  return -1;
+  return 0;
 }
 
 }; // namespace adsl

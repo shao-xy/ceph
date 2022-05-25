@@ -501,6 +501,7 @@ private:
    */
   mds_authority_t dir_auth;
 
+ public:
   std::string get_path() const;
 
  public:

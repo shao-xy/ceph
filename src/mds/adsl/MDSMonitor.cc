@@ -96,15 +96,23 @@ int MDSMonitor::terminate()
 void MDSMonitor::update_and_writelog()
 {
   mds_load_t load(mds_load());
-  dout(g_conf->adsl_mds_mon_debug_level)
-    << "IOPS " << iops_tracer.get(true) // IOPS
+  std::stringstream ss;
+  ss << "IOPS " << iops_tracer.get(true) // IOPS
     << " IOPS-CLIENT-REQ " << clientreq_tracer.get(true) // IOPS-CLIENT-REQ
     << " IOPS-SLAVE-REQ " << clientreq_tracer.get(true) // IOPS-SLAVE-REQ
     << " Cache-Inodes " << mds->mdcache->lru.lru_get_size() // Cached inodes size
     << " Cache-Inodes-Pinned " << mds->mdcache->lru.lru_get_num_pinned() // Cached inodes pinned
     << " FWPS " << fwps_tracer.get(true) // FWPS
-    << " MDSLoad " << load
-    << dendl;
+    << " MDSLoad " << load;
+  CInode * root = mds->mdcache->get_root();
+  if (root) {
+    list<CDir*> ls;
+    root->get_dirfrags(ls);
+    ss << " #DIRFRAG " << ls.size();
+  } else {
+    ss << " #DIRFRAG 0";
+  }
+  dout(g_conf->adsl_mds_mon_debug_level) << ss.str() << dendl;
 }
 
 }; /* namespace: adsl */
