@@ -267,7 +267,8 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   return load_matrix;
 }
 
-void dirfrag_load_pred_t::force_current_epoch() {
+void dirfrag_load_pred_t::force_current_epoch()
+{
   if (!bal)	return;
   if (cur_epoch != bal->beat_epoch) {
     cur_load = (!dir || do_predict(&bal->predictor) < 0) ? 0.0 : predicted_load;
@@ -275,7 +276,8 @@ void dirfrag_load_pred_t::force_current_epoch() {
   }
 }
 
-int dirfrag_load_pred_t::do_predict(Predictor * predictor) {
+int dirfrag_load_pred_t::do_predict(Predictor * predictor)
+{
   dout(15) << __func__ << " dir " << dir << " bal " << bal << dendl;
   if (!dir) {
     dout(15) << __func__ << " fail: nullptr dir " << dir << " bal " << bal << dendl;
@@ -343,7 +345,13 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor) {
   return 0;
 }
 
-double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
+inline bool dirfrag_load_pred_t::should_use()
+{
+  return bal && bal->use_pred;
+}
+
+double dirfrag_load_pred_t::meta_load(Predictor * predictor)
+{
   // if my parent has been predicted?
   if (use_parent_fast()) {
     return cur_load;
@@ -370,12 +378,14 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor) {
   return cur_load;
 }
 
-double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate) {
-  return use_pred ? pred_load.meta_load() : decay_load.meta_load(now, rate);
+double dirfrag_load_t::meta_load(utime_t now, const DecayRate& rate)
+{
+  return pred_load.should_use() ? pred_load.meta_load() : decay_load.meta_load(now, rate);
 }
 
-double dirfrag_load_t::meta_load(adsl::Predictor * predictor) {
-  return use_pred ? pred_load.meta_load(predictor) : decay_load.meta_load();
+double dirfrag_load_t::meta_load(adsl::Predictor * predictor)
+{
+  return pred_load.should_use() ? pred_load.meta_load(predictor) : decay_load.meta_load();
 }
 
 };

@@ -128,6 +128,7 @@ public:
   // TODO: This function is NOT protected by async locks. We might fix this in the future.
   void force_current_epoch();
   int do_predict(Predictor * predictor);
+  inline bool should_use();
   double meta_load(Predictor * predictor = NULL);
 
   void add(dirfrag_load_pred_t& r) {
@@ -164,7 +165,6 @@ class dirfrag_load_t {
 public:
   dirfrag_load_vec_t decay_load;
   dirfrag_load_pred_t pred_load;
-  bool use_pred;
   string name; // this field is left as empty string after (de)serialization
 
   dirfrag_load_t() {}
@@ -174,7 +174,6 @@ public:
     ENCODE_START(2, 2, bl);
     ::encode(decay_load, bl);
     ::encode(pred_load, bl);
-    ::encode(use_pred, bl);
     ENCODE_FINISH(bl);
   }
   void decode(const utime_t& now, bufferlist::iterator& bl) {
@@ -182,7 +181,6 @@ public:
     ::decode(decay_load, now, bl);
     ::decode(pred_load, bl);
     pred_load.set_parent(this);
-    ::decode(use_pred, bl);
     DECODE_FINISH(bl);
   }
   void decode(bufferlist::iterator &bl) {
