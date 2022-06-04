@@ -1,0 +1,38 @@
+#!/bin/bash
+
+echo "Git hook start: $(basename $0)"
+
+TC_WARN=""
+TC_COMMON=""
+if test -t 0 -a -t 1; then
+	TC_WARN="\033[1;31m"
+	TC_COMMON="\033[0m"
+	echo -e "${TC_WARN}Auto compilation before commit!${TC_COMMON}"
+	read -p "Press [Enter] to continue, or [s]+[Enter] to stop in 10 seconds: " -t 10 ch
+	if test "x${ch}x" == xsx -o "x${ch}x" == xSx; then
+		exit 0;
+	fi
+fi
+
+function execute_or_exit()
+{
+	echo "Executing $* ..."
+	errorlog=$(mktemp .error.XXXX.log)
+	$* >/dev/null 2>${errorlog}
+	_errno=$?
+	if test $_errno -ne 0; then
+		>&2 cat $errorlog
+		rm -f $errorlog
+		exit $_errno
+	fi
+	rm -f $errorlog
+	return 0
+}
+
+root_dir=$(git rev-parse --show-toplevel)
+cd ${root_dir}
+if test ! -d build; then
+	execute_or_exit ./do_cmake.sh
+fi
+cd build
+execute_or_exit make -j32
