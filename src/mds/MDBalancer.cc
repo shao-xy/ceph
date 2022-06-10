@@ -59,6 +59,8 @@ using std::vector;
 #define MIN_REEXPORT 5  // will automatically reexport
 #define MIN_OFFLOAD 10   // point at which i stop trying, close enough
 
+#define PREDICTOR_DEBUG " PREDICTOR_DEBUG "
+
 
 /* This function DOES put the passed message before returning */
 int MDBalancer::proc_message(Message *m)
@@ -246,6 +248,10 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
   if (!dir) return vector<LoadArray_Int>();
 
+#ifdef PREDICTOR_DEBUG
+  std::stringstream ss;
+#endif
+
   load_matrix.clear();
   int idx = 0;
   for (auto it = dir->begin();
@@ -258,10 +264,17 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
 
+#ifdef PREDICTOR_DEBUG
+      ss << cur_load[cur_load.size()-1] << ' ';
+#endif
+
       string s;
       child->make_path_string(s);
       //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
+#ifdef PREDICTOR_DEBUG
+    dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
+#endif
   }
 
   return load_matrix;
@@ -312,6 +325,9 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   }
 
   dout(15) << __func__ << " mark #5" << dendl;
+#ifdef PREDICTOR_DEBUG
+  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
+#endif
 
   // set children first
   std::stringstream ss;
