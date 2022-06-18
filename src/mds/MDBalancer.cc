@@ -268,14 +268,14 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       ss << cur_load[cur_load.size()-1] << ' ';
 #endif
 
-      string s;
-      child->make_path_string(s);
+      //string s;
+      //child->make_path_string(s);
       //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
-#ifdef PREDICTOR_DEBUG
-    dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
-#endif
   }
+#ifdef PREDICTOR_DEBUG
+  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
+#endif
 
   return load_matrix;
 }

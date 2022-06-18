@@ -26,6 +26,44 @@ end
 return predict()
 )lua";
 
+string lua_decay_diff = R"lua(
+function predict()
+	prediction = {}
+	lambda = 1/2
+	_1_lambda = 1 - lambda
+	-- PRED_LOG(0, "1 - lambda = " .. _1_lambda)
+	for entry, entry_load_list in ipairs(load_matrix) do
+		-- PRED_LOG(0, "entry = " .. entry)
+		-- PRED_LOG(0, "entry_load_list = " .. table.concat(entry_load_list, ","))
+		repeat
+			if #entry_load_list == 0 then
+				prediction[entry] = 0
+				break
+			elseif #entry_load_list == 1 then
+				prediction[entry] = lambda * entry_load_list[#entry_load_list]
+				break
+			end
+
+			-- PRED_LOG(0, " start.")
+			s = lambda * entry_load_list[1]
+			-- PRED_LOG(0, " s = " .. s)
+			for i = 2,(#entry_load_list-1) do
+				cur = entry_load_list[i]
+				s = lambda * (_1_lambda * cur + s)
+				-- PRED_LOG(0, " s = " .. s)
+			end
+			s = (1 + lambda) * entry_load_list[#entry_load_list] - s
+			prediction[entry] = s >= 0 and s or 0.0
+			-- PRED_LOG(0, "prediction[entry] = " .. prediction[entry])
+		until true
+	end
+	-- PRED_LOG(0, "Prediction: " .. table.concat(prediction, ","))
+	return prediction
+end
+
+return predict()
+)lua";
+
 string py_test_code1 = R"python(
 import sys
 def predict(load_matrix):
@@ -103,12 +141,13 @@ void test_predictor()
 
 	//std::cout << p.predict(lua_test_code1, loads, pred_load) << std::endl;
 	//p.predict("test.lua", lua_test_code1, loads, pred_load);
+	p.predict("test.lua", lua_decay_diff, loads, pred_load);
 	//p.predict("test.py", py_test_code1, loads, pred_load);
 	//pred_load.clear();
 	//p.predict("test.py", py_test_code2, loads, pred_load);
 	//pred_load.clear();
 	//p.predict("test.py", py_test_code3, loads, pred_load);
-	p.predict("127.0.0.1.sock", py_test_code1, loads, pred_load);
+	//p.predict("127.0.0.1.sock", py_test_code1, loads, pred_load);
 
 	for (auto it = pred_load.begin();
 		 it != pred_load.end();
