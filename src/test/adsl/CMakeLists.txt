@@ -1,6 +1,9 @@
 add_executable(adsl_test_mds_predictor mds/test_predictor.cc)
 target_link_libraries(adsl_test_mds_predictor mds global)
 
+add_executable(adsl_test_mds_file_predictor mds/file_predictor.cc)
+target_link_libraries(adsl_test_mds_file_predictor mds global)
+
 add_executable(adsl_test_mds_load mds/test_mds_load.cc)
 target_link_libraries(adsl_test_mds_load mds global)
 
