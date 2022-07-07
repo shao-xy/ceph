@@ -1,8 +1,54 @@
 -- #!/usr/bin/env lua
 
+-- DEBUG = true
+
+if DEBUG then
+	-- From https://github.com/slembcke/debugger.lua
+	dbg = require('debugger')
+end
+
 STREAM_MATCH_OFFSET = (not STREAM_MATCH_OFFSET) and 5 or STREAM_MATCH_OFFSET
 
 DECAY_FAC = DECAY_FAC or (1/2)
+
+function dout(...)
+	if DEBUG then
+		print(...)
+	end
+end
+
+function dump_item(t, _dump_indent, _real_indent, _newline)
+	_dump_indent = _dump_indent or ''
+	_real_indent = _real_indent or _dump_indent
+	local _inner_indent = _real_indent .. '  '
+	if type(t) == 'table' then
+		io.write(_dump_indent .. '{\n')
+		for k, v in pairs(t) do
+			dump_item(k, _inner_indent)
+			io.write(' : ')
+			local k_indent = (type(k) == 'table' and ' ' or string.gsub(tostring(k), '.', ' ')) .. '   '
+			dump_item(v, '', _inner_indent..k_indent, true)
+		end
+		io.write(_real_indent .. '}')
+	else
+		io.write(_dump_indent .. t)
+	end
+	if _newline then io.write('\n') end
+end
+
+function dump_stream_collection(t, _dump_indent)
+	assert(type(t) == 'table')
+	_dump_indent = _dump_indent or ''
+	io.write(_dump_indent .. '{\n')
+	for s, _l in pairs(t) do
+		for t, v in pairs(_l) do
+			direction_str = s .. '->' .. t .. ': '
+			io.write(_dump_indent .. '  ' .. direction_str)
+			dump_item(v, nil, _dump_indent .. '  ' .. string.gsub(direction_str, '.', ' '), true)
+		end
+	end
+	io.write(_dump_indent .. '}\n')
+end
 
 function new_matrix()
 	t = {}
@@ -40,6 +86,21 @@ function temporal_predict(load_list)
 	return s > 0 and s or 0.0
 end
 
+function sparse_temporal_predict(sparse_load_list, total_epochs)
+	local s = 0
+	pow = function (base, exp)
+		local t = 1
+		for i = 1, exp do
+			t = t * base
+		end
+		return t
+	end
+	for epoch, val in pairs(sparse_load_list) do
+		s = s + val * pow(DECAY_FAC, total_epochs - epoch + 1)
+	end
+	return s
+end
+
 function distribute_float_vertex_load(next_vertex, next_val)
 	local floor = math.floor(next_vertex)
 	local targets = {}
@@ -59,6 +120,13 @@ function table_value_table_append(t, k, e)
 		t[k] = {e}
 	else
 		table.insert(t[k], e)
+	end
+end
+
+function table_value_table_delete(t, k1, k2)
+	t[k1][k2] = nil
+	if next(t[k1]) == nil then
+		t[k1] = nil
 	end
 end
 
@@ -106,7 +174,8 @@ function Stream.split(orig_stream, substream_vols)
 end
 
 function Stream.append(stream, flow)
-	if stream.values[#stream.values] == flow.from then
+	--if DEBUG then dbg() end
+	if stream.vlist[#stream.vlist] == flow.from then
 		table.insert(stream.values, flow.val)
 		stream.epoch = flow.epoch
 		table.insert(stream.vlist, flow.to)
@@ -158,27 +227,52 @@ function match_delta_to_flows(diff_matrix, epoch)
 end
 
 function try_match_stream_to_flow(flow, waterfalls, streams, new_waterfalls, new_streams)
+	local orig_val = flow.val
 	for last_stream_start=(flow.from-STREAM_MATCH_OFFSET),(flow.from-1) do
 		-- if found?
 		if streams[last_stream_start] ~= nil then
 			for last_stream_end, last_streams in pairs(streams[last_stream_start]) do
-				if last_stream_end > flow.from then
+				-- if DEBUG then dbg() end
+				if last_stream_end >= flow.from then
 					for last_streams_idx, last_stream in pairs(last_streams) do
-						last_stream_value = last_stream.values[#last_stream.values]
+						local last_stream_value = last_stream.values[#last_stream.values]
+						-- if DEBUG then dbg() end
 						if last_stream_value <= flow.val then
 							-- Split to 2 streams
-							table_value_table_append(waterfalls[last_stream_end], flow.from, Stream.cut(last_stream, flow.from))
+							local new_stream = Stream.cut(last_stream, flow.from)
+							if new_stream then
+								table_value_table_append(waterfalls[last_stream_end], flow.from, new_stream)
+								streams[flow.from] = streams[flow.from] or {}
+								streams[flow.from][last_stream_end] = waterfalls[last_stream_end][flow.from]
+							end
 							table.remove(last_streams, last_streams_idx)
+							if next(last_streams) == nil then
+								streams[last_stream_start][last_stream_end] = nil
+								waterfalls[last_stream_end][last_stream_start] = nil
+							end
+							if next(waterfalls[last_stream_end]) == nil then
+								waterfalls[last_stream_end] = nil
+							end
+							if next(streams[last_stream_start]) == nil then
+								streams[last_stream_start] = nil
+							end
 							-- if waterfalls[flow.from] == nil then waterfalls[flow.from] = {} end
 							table_value_table_append(new_waterfalls[flow.to], flow.from, Stream.append(last_stream, flow))
+							new_streams[flow.from][flow.to] = new_waterfalls[flow.to][flow.from]
 							flow.val = flow.val - last_stream_value
 						else
 							-- Split to 3 streams
-							local new_streams = Stream.split(last_stream, {flow.val})
-							last_streams[last_streams_idx] = new_streams[2]
-							local truncated_stream = new_streams[1]
-							table_value_table_append(waterfalls[last_stream_end], flow.from, Stream.cut(truncated_stream, flow.from))
+							local splitted_streams = Stream.split(last_stream, {flow.val})
+							last_streams[last_streams_idx] = splitted_streams[2]
+							local truncated_stream = splitted_streams[1]
+							local truncated_new_stream = Stream.cut(truncated_stream, flow.from)
+							if truncated_new_stream then
+								table_value_table_append(waterfalls[last_stream_end], flow.from, truncated_new_stream)
+								streams[flow.from] = streams[flow.from] or {}
+								streams[flow.from][last_stream_end] = waterfalls[last_stream_end][flow.from]
+							end
 							table_value_table_append(new_waterfalls[flow.to], flow.from, Stream.append(truncated_stream, flow))
+							new_streams[flow.from][flow.to] = new_waterfalls[flow.to][flow.from]
 							flow.val = 0
 						end
 						if flow.val == 0 then break end
@@ -189,13 +283,19 @@ function try_match_stream_to_flow(flow, waterfalls, streams, new_waterfalls, new
 		end
 		if flow.val == 0 then break end
 	end
-	return matched
+	return orig_val - flow.val
 end
 
 function match_streams_to_flows(epoch, flows, waterfalls, streams, new_waterfalls, new_streams)
 	for flow_from, flow_sub_list in pairs(flows) do
 		for flow_to, flow_val in pairs(flow_sub_list) do
-			try_match_stream_to_flow({from=flow_from, to=flow_to, val=flow_val, epoch=epoch}, waterfalls, streams, new_waterfalls, new_streams)
+			local matched = try_match_stream_to_flow({from=flow_from, to=flow_to, val=flow_val, epoch=epoch}, waterfalls, streams, new_waterfalls, new_streams)
+			local left = flow_val - matched
+			if left > 0 then
+				flow_sub_list[flow_to] = left
+			else
+				table_value_table_delete(flows, flow_from, flow_to)
+			end
 		end
 	end
 	for flow_from, flow_sub_list in pairs(flows) do
@@ -205,6 +305,7 @@ function match_streams_to_flows(epoch, flows, waterfalls, streams, new_waterfall
 				if new_waterfalls[flow_to][flow_from] == nil then
 					new_waterfalls[flow_to][flow_from]={ {values={flow_val}, epoch=epoch, vlist={flow_from, flow_to}} }
 				else
+					-- Divide (TBD: maybe we should try a new stream?)
 					local streams = new_waterfalls[flow_to][flow_from]
 					local total, stream_vals = 0, nil
 					for _, stream in pairs(streams) do
@@ -224,6 +325,16 @@ end
 
 function predict()
 	local diff_matrix = calc_diff_matrix()
+	--[=[
+	if DEBUG then
+		print('Diff matrix')
+		for _, v in pairs(diff_matrix) do
+			print(table.concat(v, ','))
+		end
+		print()
+	end
+	--]=]
+
 	-- 2-D array for all streams collection
 	-- This table collects all flow lists. Suppose we have streams like this:
 	--     A =30=> B =20=> C
@@ -243,19 +354,32 @@ function predict()
 	-- in table "waterfalls" in a reverse way.
 	-- Both these two tables are updated by replacing old with new EACH line.
 	local streams = {}
-	local ext_stream_val = 0
+	local ext_streams = new_matrix()
 	for epoch = 1, #diff_matrix[1] do
+		if DEBUG then
+			print('\nepoch: '..epoch)
+		end
 		repeat
+			-- if DEBUG then dbg() end
 			-- New streams collection
 			local new_waterfalls = new_matrix()
 			-- New stream pointer
 			local new_streams = new_matrix()
 			local flows, ext_flows, flows_cnt = match_delta_to_flows(diff_matrix, epoch)
 
+			--[=[
+			if DEBUG then
+				print('  flows:')
+				dump_stream_collection(flows, '  ')
+				print('  ext_flows:')
+				dump_item(ext_flows, '  ', nil, true)
+				print('  flows_cnt: ' .. flows_cnt)
+			end
+			--]=]
+
 			-- External stream?
-			local ext_stream_val = 0
-			for _, flowval in pairs(ext_flows) do
-				ext_stream_val = ext_stream_val + flowval
+			for entry, flowval in pairs(ext_flows) do
+				ext_streams[entry][epoch] = flowval
 			end
 
 			---- Match flows!
@@ -265,6 +389,11 @@ function predict()
 			-- Match!
 			match_streams_to_flows(epoch, flows, waterfalls, streams, new_waterfalls, new_streams)
 
+			if DEBUG then
+				print('  new_waterfalls:')
+				dump_stream_collection(new_waterfalls, '  ')
+			end
+
 			-- Unset metatable:
 			-- Variables "waterfalls" and "streams" will refer to these two tables later
 			-- We should keep values nil when visiting non-existing keys in loops.
@@ -273,15 +402,15 @@ function predict()
 			waterfalls = new_waterfalls
 			streams = new_streams
 		until true
-
-		-- Always decay to half
-		ext_stream_val = ext_stream_val * DECAY_FAC
 	end
 
 	local predicted_diff = {}
-	-- External streams first: distribute to all nodes
-	local splice = ext_stream_val / #diff_matrix
-	for i = 1, #diff_matrix do predicted_diff[i] = splice end
+	-- External streams first
+	for i = 1, #diff_matrix do
+		predicted_diff[i] = sparse_temporal_predict(ext_streams[i], #diff_matrix[1])
+	end
+
+	if DEBUG then dbg() end
 
 	-- For each stream in waterfalls, predict the next target and load value
 	for rev_start, streams_list in pairs(waterfalls) do
@@ -289,14 +418,25 @@ function predict()
 			for stream_idx, stream in pairs(streams) do
 				local next_vertex = temporal_predict(stream.vlist)
 				local next_val = temporal_predict(stream.values)
+				predicted_diff[rev_start] = predicted_diff[rev_start] - next_val
+				-- if DEBUG then dbg() end
 				for vert, val in pairs(distribute_float_vertex_load(next_vertex, next_val)) do
-					predicted_diff[vert] = predicted_diff[vert] + val
+					if vert >= 1 and vert <= #diff_matrix then
+						-- if DEBUG then dbg() end
+						predicted_diff[vert] = predicted_diff[vert] + val
+					end
 				end
 			end
 		end
 	end
 
-	-- Generate prediction array
+	--[=[
+	dump_item(predicted_diff)
+	print()
+	--]=]
+
+	---[=[
+	-- Generate prediction array (?)
 	local prediction = {}
 	for entry, entry_load_list in pairs(load_matrix) do
 		local predicted_load = entry_load_list[#entry_load_list] + predicted_diff[entry]
@@ -305,6 +445,7 @@ function predict()
 	end
 
 	return prediction
+	--]=]
 end
 
 return predict()
