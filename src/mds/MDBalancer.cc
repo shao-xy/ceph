@@ -297,6 +297,8 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     return -1;
   }
 
+  if (dir->inode->is_stray())	return 0.0;
+
   dout(15) << __func__ << " mark #1" << dendl;
 
   if (!bal) {
@@ -326,7 +328,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 
   dout(15) << __func__ << " mark #5" << dendl;
 #ifdef PREDICTOR_DEBUG
-  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
+  dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
 #endif
 
   // set children first
