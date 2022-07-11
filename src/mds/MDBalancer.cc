@@ -250,6 +250,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 #ifdef PREDICTOR_DEBUG
   std::stringstream ss;
+  std::stringstream total_ss;
 #endif
 
   load_matrix.clear();
@@ -266,6 +267,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 #ifdef PREDICTOR_DEBUG
       ss << cur_load[cur_load.size()-1] << ' ';
+      total_ss << cur_load.total() << ' ';
 #endif
 
       //string s;
@@ -274,7 +276,8 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
     }
   }
 #ifdef PREDICTOR_DEBUG
-  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
+  dout(10) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
+  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " load_matrix total load: " << total_ss.str() << dendl;
 #endif
 
   return load_matrix;
