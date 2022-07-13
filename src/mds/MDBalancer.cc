@@ -406,7 +406,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor)
     cur_load = cur_load ? ((cur_load + predicted_load) / 2) : predicted_load;
   }
 
-  dout(5) << __func__ << " dir " << dir->get_path() << " cur_load " << cur_load << dendl;
+  dout(5) << __func__ << " dir " << (dir ? dir->get_path() : "NULLPTR") << " cur_load " << cur_load << dendl;
   return cur_load;
 }
 
