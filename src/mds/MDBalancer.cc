@@ -241,7 +241,7 @@ std::ostream& dirfrag_load_pred_t::print(std::ostream& out)
 
 inline bool dirfrag_load_pred_t::use_parent_fast() {
   return g_conf->adsl_mds_predictor_use_parent_fast
-    && cur_epoch == bal->beat_epoch;
+    && cur_epoch == bal->beat_epoch && from_parent;
 }
 
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
@@ -285,19 +285,23 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 void dirfrag_load_pred_t::force_current_epoch()
 {
-  if (!bal)	return;
+  if (dir && bal && tried_predict_epoch != bal->beat_epoch) {
+    do_predict(&bal->predictor);
+    tried_predict_epoch = bal->beat_epoch;
+  }
   if (cur_epoch != bal->beat_epoch) {
-    cur_load = (!dir || do_predict(&bal->predictor) < 0) ? 0.0 : predicted_load;
     cur_epoch = bal->beat_epoch;
+    cur_load = (predicted_epoch == cur_epoch) ? 0.0 : predicted_load;
+    from_parent = false;
   }
 }
 
 int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 {
-  dout(15) << __func__ << " dir " << dir << " bal " << bal << dendl;
   if (!dir) {
-    dout(15) << __func__ << " fail: nullptr dir " << dir << " bal " << bal << dendl;
-    return -1;
+    dout(20) << __func__ << " fail: dir NULLPTR bal " << bal << dendl;
+    // NULL dir: in most cases this means the dir_load_t when the balancer tries to estimate the total load
+    return -7;
   }
 
   if (dir->inode->is_stray())	return 0.0;
@@ -305,7 +309,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   dout(15) << __func__ << " mark #1" << dendl;
 
   if (!bal) {
-    dout(0) << __func__ << " fail: no balancer t for dir " << dir->get_path() << dendl;
+    dout(0) << __func__ << " fail: no balancer for dir " << dir->get_path() << dendl;
     return -1;
   }
 
@@ -313,7 +317,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 
   if (predicted_epoch == bal->beat_epoch) {
     // already predicted?
-    return predicted_load;
+    return 0;
   }
 
   dout(15) << __func__ << " mark #3" << dendl;
@@ -351,6 +355,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
       if (child_load) {
 	child_load->pred_load.cur_load = *it;
 	child_load->pred_load.cur_epoch = bal->beat_epoch;
+	child_load->pred_load.from_parent = true;
       }
     }
   }
@@ -373,28 +378,34 @@ inline bool dirfrag_load_pred_t::should_use()
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor)
 {
+  force_current_epoch();
+
   // if my parent has been predicted?
   if (use_parent_fast()) {
     return cur_load;
   }
 
-  if (do_predict(predictor) < 0) {
+  /*
+   * DEPRECATED: We predict within force_current_epoch()
+  int ret;
+  if ((ret = do_predict(predictor)) < 0) {
     if (cur_epoch == bal->beat_epoch) {
-      dout(5) << __func__ << " Cannot predict. Using expected load value: " << cur_load << dendl;
+      if (ret != -7) {
+	dout(5) << __func__ << " Cannot predict. Using expected load value: " << cur_load << dendl;
+      }
       return cur_load;
     } else {
       return 0.0;
     }
   }
+  */
 
-  if (cur_epoch == bal->beat_epoch) {
-    // if execution reaches here, use_parent_fast must be false, we use average of both
-    // NOTE: we don't care if value of cur_load is changed (add/sub/scale)
-    cur_load = (cur_load + predicted_load) / 2;
-  } else {
-    cur_load = predicted_load;
-    cur_epoch = bal->beat_epoch;
+  // if execution reaches here, use_parent_fast must be false, we use average of both
+  // NOTE: we don't care if value of cur_load is changed (add/sub/scale)
+  if (predicted_epoch == tried_predict_epoch) {
+    cur_load = cur_load ? ((cur_load + predicted_load) / 2) : predicted_load;
   }
+
   dout(5) << __func__ << " dir " << dir->get_path() << " cur_load " << cur_load << dendl;
   return cur_load;
 }
