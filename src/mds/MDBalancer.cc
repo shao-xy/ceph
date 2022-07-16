@@ -39,6 +39,8 @@ using std::vector;
 #include "common/config.h"
 #include "common/errno.h"
 
+#include "adsl/dout_wrapper.h"
+
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix
@@ -249,7 +251,6 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   if (!dir) return vector<LoadArray_Int>();
 
 #ifdef PREDICTOR_DEBUG
-  std::stringstream ss;
   std::stringstream total_ss;
 #endif
 
@@ -266,7 +267,6 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       load_matrix.push_back(cur_load);
 
 #ifdef PREDICTOR_DEBUG
-      ss << cur_load[cur_load.size()-1] << ' ';
       total_ss << cur_load.total() << ' ';
 #endif
 
@@ -276,8 +276,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
     }
   }
 #ifdef PREDICTOR_DEBUG
-  dout(10) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " Last epoch load: " << ss.str() << dendl;
-  dout(0) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " load_matrix total load: " << total_ss.str() << dendl;
+  dout(0) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " epoch " << bal->beat_epoch << " load_matrix total: " << total_ss.str() << dendl;
 #endif
 
   return load_matrix;
@@ -285,6 +284,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 void dirfrag_load_pred_t::force_current_epoch()
 {
+  dout(0) << __func__ << " tried_predict_epoch " << tried_predict_epoch << " bal->beat_epoch " << bal->beat_epoch << dendl;
   if (dir && bal && tried_predict_epoch != bal->beat_epoch) {
     do_predict(&bal->predictor);
     tried_predict_epoch = bal->beat_epoch;
@@ -304,7 +304,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     return -7;
   }
 
-  if (dir->inode->is_stray())	return 0.0;
+  if (dir->inode->is_stray() || dir->inode->is_mdsdir())	return 0.0;
 
   dout(15) << __func__ << " mark #1" << dendl;
 
@@ -378,6 +378,9 @@ inline bool dirfrag_load_pred_t::should_use()
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor)
 {
+  // We assume that this process is fast enough
+  Mutex::Locker l(bal->pred_mut);
+
   force_current_epoch();
 
   // if my parent has been predicted?
@@ -399,6 +402,10 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor)
     }
   }
   */
+
+#ifdef PREDICTOR_DEBUG
+  dout(5) << __func__ << " dirfrag_load_pred_t: " << *this << dendl;
+#endif
 
   // if execution reaches here, use_parent_fast must be false, we use average of both
   // NOTE: we don't care if value of cur_load is changed (add/sub/scale)

@@ -114,6 +114,7 @@ public:
     : parent(parent), dir(dir), bal(bal),
       predicted_load(0.0), predicted_epoch(-1), tried_predict_epoch(-1),
       cur_load(0.0), cur_epoch(-1), from_parent(false) {}
+
   void encode(bufferlist &bl) const;
   void decode(bufferlist::iterator &p);
   void adjust(double d) {

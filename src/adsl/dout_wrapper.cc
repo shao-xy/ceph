@@ -4,6 +4,7 @@
 #include <torch/script.h>
 
 #include "dout_wrapper.h"
+#include "mds/CDir.h"
 
 template<>
 std::ostream & operator<< <torch::Tensor>(std::ostream & os, dout_wrapper<torch::Tensor> && wrapped)
@@ -21,4 +22,15 @@ std::ostream & operator<< <torch::jit::IValue>(std::ostream & os, dout_wrapper<t
     os << "[IValue]";
   }
   return os;
+}
+
+template<>
+std::ostream & operator<< <CDir*>(std::ostream & os, dout_wrapper<CDir*> && wrapped)
+{
+  const CDir* dir = wrapped.m_t;
+  if (dir) {
+    return os << "CDir[" << dir << ' ' << dir->dirfrag() << ' ' << dir->get_path() << "/]";
+  } else {
+    return os << "CDir[NUL]";
+  }
 }
