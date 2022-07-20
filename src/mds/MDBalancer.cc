@@ -284,7 +284,9 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 void dirfrag_load_pred_t::force_current_epoch()
 {
-  dout(0) << __func__ << " tried_predict_epoch " << tried_predict_epoch << " bal->beat_epoch " << bal->beat_epoch << dendl;
+  // We assume that this process is fast enough
+  Mutex::Locker l(mut);
+
   if (dir && bal && tried_predict_epoch != bal->beat_epoch) {
     do_predict(&bal->predictor);
     tried_predict_epoch = bal->beat_epoch;
@@ -378,9 +380,6 @@ inline bool dirfrag_load_pred_t::should_use()
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor)
 {
-  // We assume that this process is fast enough
-  Mutex::Locker l(bal->pred_mut);
-
   force_current_epoch();
 
   // if my parent has been predicted?

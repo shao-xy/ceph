@@ -44,8 +44,7 @@ public:
     messenger(msgr),
     mon_client(monc),
     beat_epoch(0),
-    last_epoch_under(0), my_load(0.0), target_load(0.0),
-    pred_mut("pred_mut")
+    last_epoch_under(0), my_load(0.0), target_load(0.0)
     { }
 
   mds_load_t get_load(utime_t);
@@ -154,7 +153,6 @@ public:
   bool use_pred;
   string pred_code;
   string pred_version;
-  Mutex pred_mut;
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
 };

@@ -98,6 +98,8 @@ class dirfrag_load_pred_t {
   map<int, CInode*> pos_map;
   vector<LoadArray_Int> load_matrix;
 
+  Mutex mut;
+
   // this functions is defined in MDBalancer.cc
   vector<LoadArray_Int> load_prepare();
   inline bool use_parent_fast();
@@ -111,9 +113,11 @@ public:
 
   dirfrag_load_pred_t() : dirfrag_load_pred_t(NULL, NULL) {}
   explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal, dirfrag_load_t * parent = NULL)
-    : parent(parent), dir(dir), bal(bal),
+    : parent(parent), dir(dir), bal(bal), mut("dirfrag_load_pred_t"),
       predicted_load(0.0), predicted_epoch(-1), tried_predict_epoch(-1),
       cur_load(0.0), cur_epoch(-1), from_parent(false) {}
+  dirfrag_load_pred_t(const dirfrag_load_pred_t & another);
+  void operator=(const dirfrag_load_pred_t & another);
 
   void encode(bufferlist &bl) const;
   void decode(bufferlist::iterator &p);

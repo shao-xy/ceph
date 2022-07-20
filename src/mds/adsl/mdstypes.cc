@@ -14,6 +14,29 @@ void dirfrag_load_t::dump(Formatter *f) const
   f->close_section();
 }
 
+dirfrag_load_pred_t::dirfrag_load_pred_t(const dirfrag_load_pred_t & another)
+  : parent(NULL), dir(another.dir),
+  bal(another.bal), mut("dirfrag_load_pred_t"),
+  predicted_load(another.predicted_load),
+  predicted_epoch(another.predicted_epoch),
+  tried_predict_epoch(another.tried_predict_epoch),
+  cur_load(another.cur_load),
+  cur_epoch(another.cur_epoch),
+  from_parent(another.from_parent)
+{ }
+
+void dirfrag_load_pred_t::operator=(const dirfrag_load_pred_t & another)
+{
+  this->dir = another.dir;
+  this->bal = another.bal;
+  this->predicted_load = another.predicted_load;
+  this->predicted_epoch = another.predicted_epoch;
+  this->tried_predict_epoch = another.tried_predict_epoch;
+  this->cur_load = another.cur_load;
+  this->cur_epoch = another.cur_epoch;
+  this->from_parent = another.from_parent;
+}
+
 void dirfrag_load_pred_t::encode(bufferlist &bl) const {
   ::encode(predicted_load, bl);
   ::encode(predicted_epoch, bl);
