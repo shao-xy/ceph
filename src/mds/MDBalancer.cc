@@ -350,12 +350,10 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     in->get_dirfrags(dfs);
     if (dfs.size() == 1) {
       CDir * child_dir = dfs.front();
-      dirfrag_load_t * child_load = child_dir->get_pop_by_name(parent->name);
-      if (child_load) {
-	child_load->pred_load.cur_load = *it;
-	child_load->pred_load.cur_epoch = bal->beat_epoch;
-	child_load->pred_load.from_parent = true;
-      }
+      dirfrag_load_pred_t & child_load = child_dir->pop_pred;
+      child_load.cur_load = *it;
+      child_load.cur_epoch = bal->beat_epoch;
+      child_load.from_parent = true;
     }
   }
 
@@ -442,7 +440,7 @@ double dirfrag_load_t::meta_load(adsl::Predictor * predictor)
 
 mds_load_t MDBalancer::get_load(utime_t now)
 {
-  mds_load_t load(now, this);
+  mds_load_t load(now);
   dout(15) << "MDBalancer::" << __func__ << " Initially " << load.auth << dendl;
 
   if (mds->mdcache->get_root()) {
@@ -918,15 +916,17 @@ void MDBalancer::prep_rebalance(int beat)
     double total_load = 0.0;
     multimap<double,mds_rank_t> load_map;
 
+    /*
     dout(15) << "SXY dump load map:" << dendl;
     for (mds_rank_t i=mds_rank_t(0); i < mds_rank_t(cluster_size); i++) {
       mds_load_t &load = mds_load[i];
       adsl::dirfrag_load_pred_t & pred_load = load.auth.pred_load;
       dout(15) << "  MDS rank " << i << " pred_load [dir=" << pred_load.get_dir() << ",bal=" << pred_load.get_balancer() << "] " << pred_load << dendl;
     }
+    */
 
     for (mds_rank_t i=mds_rank_t(0); i < mds_rank_t(cluster_size); i++) {
-      map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now(), this));
+      map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now()));
       std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
       mds_load_t &load(r.first->second);
 
@@ -1077,7 +1077,7 @@ int MDBalancer::mantle_prep_rebalance()
   for (mds_rank_t i=mds_rank_t(0);
        i < mds_rank_t(cluster_size);
        i++) {
-    map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now(), this));
+    map<mds_rank_t, mds_load_t>::value_type val(i, mds_load_t(ceph_clock_now()));
     std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
     mds_load_t &load(r.first->second);
 
@@ -1533,7 +1533,7 @@ void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amoun
  */
 void MDBalancer::subtract_export(CDir *dir, utime_t now)
 {
-  adsl::dirfrag_load_t subload = dir->pop_auth_subtree;
+  dirfrag_load_vec_t subload = dir->pop_auth_subtree;
 
   while (true) {
     dir = dir->inode->get_parent_dir();
@@ -1547,7 +1547,7 @@ void MDBalancer::subtract_export(CDir *dir, utime_t now)
 
 void MDBalancer::add_import(CDir *dir, utime_t now)
 {
-  adsl::dirfrag_load_t subload = dir->pop_auth_subtree;
+  dirfrag_load_vec_t subload = dir->pop_auth_subtree;
 
   while (true) {
     dir = dir->inode->get_parent_dir();

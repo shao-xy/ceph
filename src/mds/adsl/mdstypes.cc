@@ -5,7 +5,7 @@
 namespace adsl {
 
 dirfrag_load_t::dirfrag_load_t(const utime_t &now, CDir * dir, MDBalancer * bal, string name)
-    : decay_load(now), pred_load(dir, bal, this), name(name) {}
+    : decay_load(now), pred_load(dir, bal), name(name) {}
 
 void dirfrag_load_t::dump(Formatter *f) const
 {
@@ -15,7 +15,7 @@ void dirfrag_load_t::dump(Formatter *f) const
 }
 
 dirfrag_load_pred_t::dirfrag_load_pred_t(const dirfrag_load_pred_t & another)
-  : parent(NULL), dir(another.dir),
+  : dir(another.dir),
   bal(another.bal), mut("dirfrag_load_pred_t"),
   predicted_load(another.predicted_load),
   predicted_epoch(another.predicted_epoch),

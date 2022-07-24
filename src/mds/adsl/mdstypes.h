@@ -92,7 +92,6 @@ using LoadArray_Double = LoadArray<double>;
 class dirfrag_load_t;
 
 class dirfrag_load_pred_t {
-  dirfrag_load_t * parent;
   CDir * dir;
   MDBalancer * bal;
   map<int, CInode*> pos_map;
@@ -112,8 +111,8 @@ public:
   bool from_parent;
 
   dirfrag_load_pred_t() : dirfrag_load_pred_t(NULL, NULL) {}
-  explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal, dirfrag_load_t * parent = NULL)
-    : parent(parent), dir(dir), bal(bal), mut("dirfrag_load_pred_t"),
+  explicit dirfrag_load_pred_t(CDir * dir, MDBalancer * bal)
+    : dir(dir), bal(bal), mut("dirfrag_load_pred_t"),
       predicted_load(0.0), predicted_epoch(-1), tried_predict_epoch(-1),
       cur_load(0.0), cur_epoch(-1), from_parent(false) {}
   dirfrag_load_pred_t(const dirfrag_load_pred_t & another);
@@ -155,7 +154,6 @@ public:
   CDir * get_dir() { return dir; }
   MDBalancer * get_balancer() { return bal; }
   inline void set_balancer(MDBalancer * bal) { this->bal = bal; }
-  inline void set_parent(dirfrag_load_t * parent) { this->parent = parent; }
   std::ostream& print(std::ostream& out);
 };
 inline std::ostream& operator<<(std::ostream& out, dirfrag_load_pred_t& dlp)
@@ -187,7 +185,6 @@ public:
     DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, bl);
     ::decode(decay_load, now, bl);
     ::decode(pred_load, bl);
-    pred_load.set_parent(this);
     DECODE_FINISH(bl);
   }
   void decode(bufferlist::iterator &bl) {

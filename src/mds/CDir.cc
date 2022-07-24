@@ -192,10 +192,10 @@ CDir::CDir(CInode *in, frag_t fg, MDCache *mdcache, bool auth) :
   num_dirty(0), committing_version(0), committed_version(0),
   dir_auth_pins(0), request_pins(0),
   dir_rep(REP_NONE),
-  pop_me(ceph_clock_now(), this, mdcache->mds->balancer, "me"),
-  pop_nested(ceph_clock_now(), this, mdcache->mds->balancer, "nested"),
-  pop_auth_subtree(ceph_clock_now(), this, mdcache->mds->balancer, "auth_subtree"),
-  pop_auth_subtree_nested(ceph_clock_now(), this, mdcache->mds->balancer, "auth_subtree_nested"),
+  pop_me(ceph_clock_now()),
+  pop_nested(ceph_clock_now()),
+  pop_auth_subtree(ceph_clock_now()),
+  pop_auth_subtree_nested(ceph_clock_now()),
   num_dentries_nested(0), num_dentries_auth_subtree(0),
   num_dentries_auth_subtree_nested(0),
   dir_auth(CDIR_AUTH_DEFAULT)
@@ -3322,21 +3322,6 @@ bool CDir::should_split_fast() const
   }
 
   return effective_size > fast_limit;
-}
-
-adsl::dirfrag_load_t * CDir::get_pop_by_name(string name)
-{
-  if (name == "me") {
-    return &pop_me;
-  } else if (name == "nested") {
-    return &pop_nested;
-  } else if (name == "auth_subtree") {
-    return &pop_auth_subtree;
-  } else if (name == "auth_subtree_nested") {
-    return &pop_auth_subtree_nested;
-  } else {
-    return NULL;
-  }
 }
 
 MEMPOOL_DEFINE_OBJECT_FACTORY(CDir, co_dir, mds_co);
