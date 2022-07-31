@@ -284,9 +284,6 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
 void dirfrag_load_pred_t::force_current_epoch()
 {
-  // We assume that this process is fast enough
-  Mutex::Locker l(mut);
-
   if (dir && bal && tried_predict_epoch != bal->beat_epoch) {
     do_predict(&bal->predictor);
     tried_predict_epoch = bal->beat_epoch;
@@ -1422,13 +1419,6 @@ void MDBalancer::maybe_fragment(CDir *dir, bool hot)
 
 void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amount)
 {
-  CInode * in = dir->get_inode();
-  if (in->already_hit) {
-    in->already_hit = false;
-  } else {
-    in->last_load++;
-  }
-
   // hit me
   double v = dir->pop_me.get(type).hit(now, mds->mdcache->decayrate, amount);
 
@@ -1519,6 +1509,16 @@ void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amoun
 
     if (dir->inode->get_parent_dn() == 0) break;
     dir = dir->inode->get_parent_dn()->get_dir();
+  }
+
+  // hit inode and all ancestors after this dir might be fragmented
+  // hit inode instead: we don't have accumulators in CDir struct
+  CInode * in = dir->get_inode();
+  while (in) {
+    in->last_load++;
+    CDir * parent_dir = in->get_parent_dir();
+    if (!parent_dir)	break;
+    in = parent_dir->get_inode();
   }
 }
 

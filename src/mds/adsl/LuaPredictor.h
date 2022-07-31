@@ -8,6 +8,8 @@
 
 #include "Predictor.h"
 
+#include "common/Mutex.h"
+
 namespace adsl {
 
 class LuaPredictor : public PredictorImpl {
@@ -19,6 +21,7 @@ class LuaPredictor : public PredictorImpl {
 		LoadArray_Double &pred_load) override;
 
   protected:
+    Mutex mut;
     lua_State *L;
     string stack_dump();
 };

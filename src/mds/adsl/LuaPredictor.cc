@@ -37,6 +37,9 @@ int LuaPredictor::predict(boost::string_view script,
 		       vector<LoadArray_Int> &cur_loads,
 		       LoadArray_Double &pred_load)
 {
+  // We assume that this process is fast enough
+  Mutex::Locker l(mut);
+
   // reset stack
   lua_settop(L, 0);
 
@@ -107,6 +110,7 @@ int LuaPredictor::predict(boost::string_view script,
 }
 
 LuaPredictor::LuaPredictor()
+  : mut("LuaPredictor")
 {
   /* build lua vm state */
   L = luaL_newstate();
