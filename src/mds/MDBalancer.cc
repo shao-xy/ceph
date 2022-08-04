@@ -195,8 +195,12 @@ public:
 };
 
 
-double mds_load_t::mds_load()
+double mds_load_t::mds_load(bool use_pred)
 {
+  if (use_pred) {
+    return pred_auth;
+  }
+
   switch(g_conf->mds_bal_mode) {
   case 0:
     return
@@ -451,6 +455,8 @@ mds_load_t MDBalancer::get_load(utime_t now)
 	 ++p) {
       load.auth.add(now, mds->mdcache->decayrate, (*p)->pop_auth_subtree_nested);
       load.all.add(now, mds->mdcache->decayrate, (*p)->pop_nested);
+      load.pred_auth += (*p)->pop_pred.meta_load();
+      //load.pred_load += (*p)->pop_pred.meta_load();
       dout(15) << "MDBalancer::" << __func__ << " After add " << load.auth << dendl;
     }
   } else {
@@ -903,9 +909,9 @@ void MDBalancer::prep_rebalance(int beat)
     // rescale!  turn my mds_load back into meta_load units
     double load_fac = 1.0;
     map<mds_rank_t, mds_load_t>::iterator m = mds_load.find(whoami);
-    if ((m != mds_load.end()) && (m->second.mds_load() > 0)) {
+    if ((m != mds_load.end()) && (m->second.mds_load(use_pred) > 0)) {
       double metald = m->second.auth.meta_load(rebalance_time, mds->mdcache->decayrate);
-      double mdsld = m->second.mds_load();
+      double mdsld = m->second.mds_load(use_pred);
       load_fac = metald / mdsld;
       dout(7) << " load_fac is " << load_fac
 	      << " <- " << m->second.auth << " " << metald
@@ -932,13 +938,13 @@ void MDBalancer::prep_rebalance(int beat)
 
       dout(15) << " SXY show MDS load rank=" << i << " load=" << load << dendl;
 
-      double l = load.mds_load() * load_fac;
+      double l = load.mds_load(use_pred) * load_fac;
       mds_meta_load[i] = l;
 
       if (whoami == 0)
 	dout(5) << "  mds." << i
 		<< " " << load
-		<< " = " << load.mds_load()
+		<< " = " << load.mds_load(use_pred)
 		<< " ~ " << l << dendl;
 
       if (whoami == i) my_load = l;

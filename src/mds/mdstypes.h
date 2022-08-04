@@ -1565,7 +1565,7 @@ struct mds_load_t {
     // all.set_balancer(bal);
   }
   
-  double mds_load();  // defiend in MDBalancer.cc
+  double mds_load(bool use_pred);  // defiend in MDBalancer.cc
   void encode(bufferlist& bl) const;
   void decode(const utime_t& now, bufferlist::iterator& bl);
   //this one is for dencoder infrastructure
