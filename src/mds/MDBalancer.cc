@@ -1384,8 +1384,7 @@ void MDBalancer::hit_inode(utime_t now, CInode *in, int type, int who)
   // hit inode
   in->pop.get(type).hit(now, mds->mdcache->decayrate);
 
-  in->last_load++;
-  in->already_hit = true;
+  in->hit(beat_epoch);
 
   if (in->get_parent_dn())
     hit_dir(now, in->get_parent_dn()->get_dir(), type, who);
@@ -1519,13 +1518,7 @@ void MDBalancer::hit_dir(utime_t now, CDir *dir, int type, int who, double amoun
 
   // hit inode and all ancestors after this dir might be fragmented
   // hit inode instead: we don't have accumulators in CDir struct
-  CInode * in = dir->get_inode();
-  while (in) {
-    in->last_load++;
-    CDir * parent_dir = in->get_parent_dir();
-    if (!parent_dir)	break;
-    in = parent_dir->get_inode();
-  }
+  dir->get_inode()->hit(beat_epoch);
 }
 
 
