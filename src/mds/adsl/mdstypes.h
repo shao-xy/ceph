@@ -132,7 +132,7 @@ public:
 
   // these functions are defined in MDBalancer.cc
   // TODO: This function is NOT protected by async locks. We might fix this in the future.
-  void force_current_epoch();
+  void force_current_epoch(int epoch = -1);
   int do_predict(Predictor * predictor);
   inline bool should_use();
   double meta_load(Predictor * predictor = NULL);

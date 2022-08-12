@@ -223,7 +223,7 @@ double mds_load_t::mds_load(bool use_pred)
 #undef dout_subsys
 #define dout_subsys ceph_subsys_mds_predictor
 #undef dout_prefix
-#define dout_prefix *_dout << "mds." << bal->mds->get_nodeid() << ".predictor "
+#define dout_prefix *_dout << "mds." << (bal ? std::to_string(bal->mds->get_nodeid()) : "?") << ".predictor "
 #undef dout
 #define dout(lvl) \
   do {\
@@ -286,14 +286,24 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   return load_matrix;
 }
 
-void dirfrag_load_pred_t::force_current_epoch()
+void dirfrag_load_pred_t::force_current_epoch(int epoch)
 {
-  if (dir && bal && tried_predict_epoch != bal->beat_epoch) {
+  // find target epoch first
+  int target_epoch = -1;
+  if (bal) {
+    target_epoch = bal->beat_epoch;
+  } else if (epoch > 0) {
+    target_epoch = epoch;
+  } else {
+    return;
+  }
+
+  if (dir && bal && tried_predict_epoch != target_epoch) {
     do_predict(&bal->predictor);
     tried_predict_epoch = bal->beat_epoch;
   }
-  if (cur_epoch != bal->beat_epoch) {
-    cur_epoch = bal->beat_epoch;
+  if (cur_epoch != target_epoch) {
+    cur_epoch = target_epoch;
     cur_load = (predicted_epoch == cur_epoch) ? 0.0 : predicted_load;
     from_parent = false;
   }
