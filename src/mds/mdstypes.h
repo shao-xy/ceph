@@ -1586,6 +1586,7 @@ inline void decode(mds_load_t &c, bufferlist::iterator &p) {
 inline std::ostream& operator<<( std::ostream& out, mds_load_t& load )
 {
   return out << "mdsload<" << load.auth << "/" << load.all
+             << ", pred_auth " << load.pred_auth 
              << ", req " << load.req_rate 
              << ", hr " << load.cache_hit_rate
              << ", qlen " << load.queue_len

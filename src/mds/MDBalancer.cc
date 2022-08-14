@@ -455,7 +455,7 @@ double dirfrag_load_t::meta_load(adsl::Predictor * predictor)
 mds_load_t MDBalancer::get_load(utime_t now)
 {
   mds_load_t load(now);
-  dout(15) << "MDBalancer::" << __func__ << " Initially " << load.auth << dendl;
+  dout(15) << "MDBalancer::" << __func__ << " Initially " << load.pred_auth << dendl;
 
   if (mds->mdcache->get_root()) {
     list<CDir*> ls;
@@ -467,7 +467,7 @@ mds_load_t MDBalancer::get_load(utime_t now)
       load.all.add(now, mds->mdcache->decayrate, (*p)->pop_nested);
       load.pred_auth += (*p)->pop_pred.meta_load();
       //load.pred_load += (*p)->pop_pred.meta_load();
-      dout(15) << "MDBalancer::" << __func__ << " After add " << load.auth << dendl;
+      dout(15) << "MDBalancer::" << __func__ << " After add " << load.pred_auth << dendl;
     }
   } else {
     dout(20) << "get_load no root, no load" << dendl;
