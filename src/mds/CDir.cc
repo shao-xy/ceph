@@ -196,6 +196,7 @@ CDir::CDir(CInode *in, frag_t fg, MDCache *mdcache, bool auth) :
   pop_nested(ceph_clock_now()),
   pop_auth_subtree(ceph_clock_now()),
   pop_auth_subtree_nested(ceph_clock_now()),
+  pop_pred(this, cache->mds->balancer),
   num_dentries_nested(0), num_dentries_auth_subtree(0),
   num_dentries_auth_subtree_nested(0),
   dir_auth(CDIR_AUTH_DEFAULT)
