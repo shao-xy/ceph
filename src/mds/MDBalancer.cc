@@ -274,9 +274,9 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       total_ss << cur_load.total() << ' ';
 #endif
 
-      //string s;
-      //child->make_path_string(s);
-      //dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      string s;
+      child->make_path_string(s);
+      dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }
 #ifdef PREDICTOR_DEBUG
