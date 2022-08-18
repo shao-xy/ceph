@@ -40,6 +40,8 @@
 #include "SnapRealm.h"
 #include "Mutation.h"
 
+#include "common/Mutex.h"
+
 #define dout_context g_ceph_context
 
 class Context;
@@ -664,6 +666,7 @@ public:
     nestlock(this, &nestlock_type),
     flocklock(this, &flocklock_type),
     policylock(this, &policylock_type),
+    load_mut("CInode::load_mut"),
     recent_load(RECENT_LOAD_EPOCH_LENGTH)
   {
     if (auth) state_set(STATE_AUTH);
@@ -1147,6 +1150,10 @@ private:
                             int rval, int stage);
   friend class ValidationContinuation;
   /** @} Scrubbing and fsck */
+
+private:
+  Mutex load_mut;
+  void _force_current_epoch(int epoch);
 
 public:
   int last_load = 0;

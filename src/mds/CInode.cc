@@ -4561,20 +4561,30 @@ bool CInode::is_exportable(mds_rank_t dest) const
 
 MEMPOOL_DEFINE_OBJECT_FACTORY(CInode, co_inode, mds_co);
 
-void CInode::force_current_epoch(int epoch)
+void CInode::_force_current_epoch(int epoch)
 {
+  assert(load_mut.is_locked_by_me());
   if (epoch > my_beat_epoch) {
     recent_load.shift(epoch - my_beat_epoch, last_load);
+    last_load = 0;
     my_beat_epoch = epoch;
   }
+}
+
+void CInode::force_current_epoch(int epoch)
+{
+  Mutex::Locker l(load_mut);
+  _force_current_epoch(epoch);
 }
 
 void CInode::hit(int epoch)
 {
   CInode * in = this;
   while (in) {
-    in->force_current_epoch(epoch);
+    in->load_mut.Lock();
+    in->_force_current_epoch(epoch);
     in->last_load++;
+    in->load_mut.Unlock();
     CDir * parent_dir = in->get_parent_dir();
     if (!parent_dir)	break;
     in = parent_dir->get_inode();
