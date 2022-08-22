@@ -4580,7 +4580,7 @@ void CInode::force_current_epoch(int epoch)
 void CInode::hit(int epoch)
 {
   CInode * in = this;
-  while (in) {
+  while (in && in->is_auth()) {
     in->load_mut.Lock();
     in->_force_current_epoch(epoch);
     in->last_load++;

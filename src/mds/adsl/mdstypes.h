@@ -121,33 +121,41 @@ public:
   void encode(bufferlist &bl) const;
   void decode(bufferlist::iterator &p);
   void adjust(double d) {
+    Mutex::Locker l(mut);
     force_current_epoch();
     cur_load += d;
   }
   void zero() {
+    Mutex::Locker l(mut);
     force_current_epoch();
     cur_load = 0;
   }
 
 
   // these functions are defined in MDBalancer.cc
-  // TODO: This function is NOT protected by async locks. We might fix this in the future.
+  // These function are protected by async locks. Each dirfrag_load_pred_t struct might be modified within only one thread.
+private:
   void force_current_epoch(int epoch = -1);
   int do_predict(Predictor * predictor);
+
+public:
   inline bool should_use();
   double meta_load(Predictor * predictor = NULL);
 
   void add(dirfrag_load_pred_t& r) {
+    Mutex::Locker l(mut);
     force_current_epoch();
     r.force_current_epoch();
     cur_load += r.cur_load;
   }
   void sub(dirfrag_load_pred_t& r) {
+    Mutex::Locker l(mut);
     force_current_epoch();
     r.force_current_epoch();
     cur_load -= r.cur_load;
   }
   void scale(double f) {
+    Mutex::Locker l(mut);
     force_current_epoch();
     cur_load *= f;
   }

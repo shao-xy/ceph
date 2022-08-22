@@ -354,6 +354,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   // set children first
   std::stringstream ss;
   int idx = 0;
+  predicted_load = 0;
   for (auto it = predicted.begin();
        it != predicted.end();
        it++) {
@@ -369,12 +370,15 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
       child_load.cur_epoch = bal->beat_epoch;
       child_load.from_parent = true;
     }
+    if (in->is_auth()) {
+      predicted_load += *it;
+    }
   }
 
   dout(15) << __func__ << " mark #6" << dendl;
 
   // set my predicted load
-  predicted_load = predicted.total();
+  //predicted_load = predicted.total();
   predicted_epoch = bal->beat_epoch;
   //dout(15) << __func__ << " Before end." << dendl;
   dout(10) << __func__ << " CDir path: " << dir->get_path() << " (" << predicted_load << ',' << predicted_epoch << ") [" << ss.str() << "] " << dendl;
@@ -389,6 +393,7 @@ inline bool dirfrag_load_pred_t::should_use()
 
 double dirfrag_load_pred_t::meta_load(Predictor * predictor)
 {
+  Mutex::Locker l(mut);
   force_current_epoch();
 
   // if my parent has been predicted?
@@ -465,8 +470,10 @@ mds_load_t MDBalancer::get_load(utime_t now)
 	 ++p) {
       load.auth.add(now, mds->mdcache->decayrate, (*p)->pop_auth_subtree_nested);
       load.all.add(now, mds->mdcache->decayrate, (*p)->pop_nested);
-      load.pred_auth += (*p)->pop_pred.meta_load();
-      //load.pred_load += (*p)->pop_pred.meta_load();
+      if ((*p)->is_auth()) {
+	load.pred_auth += (*p)->pop_pred.meta_load();
+      }
+      load.pred_all += (*p)->pop_pred.meta_load();
       dout(15) << "MDBalancer::" << __func__ << " After add " << load.pred_auth << dendl;
     }
   } else {
@@ -917,6 +924,7 @@ void MDBalancer::prep_rebalance(int beat)
     mds->mdcache->migrator->clear_export_queue();
 
     // rescale!  turn my mds_load back into meta_load units
+    /*
     double load_fac = 1.0;
     map<mds_rank_t, mds_load_t>::iterator m = mds_load.find(whoami);
     if ((m != mds_load.end()) && (m->second.mds_load(use_pred) > 0)) {
@@ -928,6 +936,7 @@ void MDBalancer::prep_rebalance(int beat)
 	      << " / " << mdsld
 	      << dendl;
     }
+    */
 
     double total_load = 0.0;
     multimap<double,mds_rank_t> load_map;
@@ -948,7 +957,8 @@ void MDBalancer::prep_rebalance(int beat)
 
       dout(15) << " SXY show MDS load rank=" << i << " load=" << load << dendl;
 
-      double l = load.mds_load(use_pred) * load_fac;
+      //double l = load.mds_load(use_pred) * load_fac;
+      double l = load.mds_load(use_pred);
       mds_meta_load[i] = l;
 
       if (whoami == 0)
