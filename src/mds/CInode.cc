@@ -4579,9 +4579,11 @@ void CInode::force_current_epoch(int epoch)
 
 void CInode::hit(int epoch)
 {
+  dout(1) << "CInode::hit start" << dendl;
   CInode * in = this;
   while (in && (in->is_auth() || in->is_root())) {
     in->load_mut.Lock();
+    dout(1) << "CInode::hit cur: " << *in << dendl;
     in->_force_current_epoch(epoch);
     in->last_load++;
     in->load_mut.Unlock();
@@ -4589,6 +4591,7 @@ void CInode::hit(int epoch)
     if (!parent_dir)	break;
     in = parent_dir->get_inode();
   }
+  dout(1) << "CInode::hit end" << dendl;
 }
 
 adsl::LoadArray_Int CInode::get_loadarray(int epoch)
