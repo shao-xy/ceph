@@ -370,9 +370,9 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
       child_load.cur_epoch = bal->beat_epoch;
       child_load.from_parent = true;
     }
-    if (in->is_auth()) {
-      predicted_load += *it;
-    }
+    //if (in->is_auth()) {
+    predicted_load += *it;
+    //}
   }
 
   dout(15) << __func__ << " mark #6" << dendl;
@@ -470,9 +470,9 @@ mds_load_t MDBalancer::get_load(utime_t now)
 	 ++p) {
       load.auth.add(now, mds->mdcache->decayrate, (*p)->pop_auth_subtree_nested);
       load.all.add(now, mds->mdcache->decayrate, (*p)->pop_nested);
-      if ((*p)->is_auth()) {
+      //if ((*p)->is_auth()) {
 	load.pred_auth += (*p)->pop_pred.meta_load();
-      }
+      //}
       load.pred_all += (*p)->pop_pred.meta_load();
       dout(5) << "MDBalancer::" << __func__ << " After add " << load.pred_auth << ", dir " << *(*p) << dendl;
     }
