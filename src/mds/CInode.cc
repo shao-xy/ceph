@@ -4581,7 +4581,8 @@ void CInode::hit(int epoch)
 {
   dout(1) << "CInode::hit start" << dendl;
   CInode * in = this;
-  while (in && (in->is_auth() || in->is_root())) {
+  //while (in && (in->is_auth() || in->is_root())) {
+  while (in) {
     in->load_mut.Lock();
     dout(1) << "CInode::hit cur: " << *in << dendl;
     in->_force_current_epoch(epoch);
