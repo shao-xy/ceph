@@ -1151,7 +1151,8 @@ void MDBalancer::try_rebalance(balance_state_t& state)
     CDir *im = *it;
     if (im->get_inode()->is_stray()) continue;
 
-    double pop = im->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+    //double pop = im->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+    double pop = im->pop_pred.meta_load();
     if (g_conf->mds_bal_idle_threshold > 0 &&
 	pop < g_conf->mds_bal_idle_threshold &&
 	im->inode != mds->mdcache->get_root() &&
@@ -1204,7 +1205,8 @@ void MDBalancer::try_rebalance(balance_state_t& state)
 	    dir->inode->is_stray())
 	  continue;
 	if (dir->is_freezing() || dir->is_frozen()) continue;  // export pbly already in progress
-	double pop = dir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+	//double pop = dir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+	double pop = dir->pop_pred.meta_load();
 	assert(dir->inode->authority().first == target);  // cuz that's how i put it in the map, dummy
 
 	if (pop <= amount-have) {
@@ -1271,7 +1273,8 @@ void MDBalancer::try_rebalance(balance_state_t& state)
       dout(5) << "   - exporting "
 	       << (*it)->pop_auth_subtree
 	       << " "
-	       << (*it)->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate)
+	       //<< (*it)->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate)
+	       << (*it)->pop_pred.meta_load()
 	       << " to mds." << target
 	       << " " << **it
 	       << dendl;
@@ -1300,7 +1303,8 @@ void MDBalancer::find_exports(CDir *dir,
   list<CDir*> bigger_rep, bigger_unrep;
   multimap<double, CDir*> smaller;
 
-  double dir_pop = dir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+  //double dir_pop = dir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+  double dir_pop = dir->pop_pred.meta_load();
   dout(7) << " find_exports in " << dir_pop << " " << *dir << " need " << need << " (" << needmin << " - " << needmax << ")" << dendl;
 
   double subdir_sum = 0;
@@ -1321,7 +1325,8 @@ void MDBalancer::find_exports(CDir *dir,
       if (subdir->is_frozen()) continue;  // can't export this right now!
 
       // how popular?
-      double pop = subdir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+      //double pop = subdir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
+      double pop = subdir->pop_pred.meta_load();
       subdir_sum += pop;
       dout(15) << "   subdir pop " << pop << " " << *subdir << dendl;
 
