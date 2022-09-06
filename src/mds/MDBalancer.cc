@@ -61,7 +61,7 @@ using std::vector;
 #define MIN_REEXPORT 5  // will automatically reexport
 #define MIN_OFFLOAD 10   // point at which i stop trying, close enough
 
-#define PREDICTOR_DEBUG " PREDICTOR_DEBUG "
+//#define PREDICTOR_DEBUG " PREDICTOR_DEBUG "
 
 
 /* This function DOES put the passed message before returning */
@@ -254,9 +254,9 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
   if (!dir) return vector<LoadArray_Int>();
 
-#ifdef PREDICTOR_DEBUG
-  std::stringstream total_ss;
-#endif
+//#ifdef PREDICTOR_DEBUG
+//  std::stringstream total_ss;
+//#endif
 
   load_matrix.clear();
   int idx = 0;
@@ -270,18 +270,18 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
 
-#ifdef PREDICTOR_DEBUG
-      total_ss << cur_load.total() << ' ';
-#endif
+//#ifdef PREDICTOR_DEBUG
+//      total_ss << cur_load.total() << ' ';
+//#endif
 
-      string s;
-      child->make_path_string(s);
-      dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      // string s;
+      // child->make_path_string(s);
+      // dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
     }
   }
-#ifdef PREDICTOR_DEBUG
-  dout(0) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " epoch " << bal->beat_epoch << " load_matrix total: " << total_ss.str() << dendl;
-#endif
+//#ifdef PREDICTOR_DEBUG
+//  dout(0) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " epoch " << bal->beat_epoch << " load_matrix total: " << total_ss.str() << dendl;
+//#endif
 
   return load_matrix;
 }
@@ -319,34 +319,34 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 
   if (dir->inode->is_stray() || dir->inode->is_mdsdir())	return 0.0;
 
-  dout(15) << __func__ << " mark #1" << dendl;
+  // dout(15) << __func__ << " mark #1" << dendl;
 
   if (!bal) {
     dout(0) << __func__ << " fail: no balancer for dir " << dir->get_path() << dendl;
     return -1;
   }
 
-  dout(15) << __func__ << " mark #2" << dendl;
+  // dout(15) << __func__ << " mark #2" << dendl;
 
   if (predicted_epoch == bal->beat_epoch) {
     // already predicted?
     return 0;
   }
 
-  dout(15) << __func__ << " mark #3" << dendl;
+  // dout(15) << __func__ << " mark #3" << dendl;
 
   if (!predictor) {
     predictor = &bal->predictor;
   }
 
-  dout(15) << __func__ << " mark #4" << dendl;
+  // dout(15) << __func__ << " mark #4" << dendl;
 
   LoadArray_Double predicted;
   if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
     return -1;
   }
 
-  dout(15) << __func__ << " mark #5" << dendl;
+  // dout(15) << __func__ << " mark #5" << dendl;
 #ifdef PREDICTOR_DEBUG
   dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
 #endif
@@ -358,7 +358,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   for (auto it = predicted.begin();
        it != predicted.end();
        it++) {
-    dout(15) << __func__ << " Predicting child: " << idx << " -> " << *it << dendl;
+    // dout(15) << __func__ << " Predicting child: " << idx << " -> " << *it << dendl;
     ss << *it << ' ';
     CInode * in = pos_map[idx++];
     list<CDir*> dfs;
@@ -375,7 +375,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     //}
   }
 
-  dout(15) << __func__ << " mark #6" << dendl;
+  // dout(15) << __func__ << " mark #6" << dendl;
 
   // set my predicted load
   //predicted_load = predicted.total();
