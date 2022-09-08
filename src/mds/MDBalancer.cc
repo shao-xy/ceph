@@ -260,12 +260,25 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
   load_matrix.clear();
   int idx = 0;
+  vector<pair<boost::string_view, CInode*> > entries;
   for (auto it = dir->begin();
        it != dir->end();
        it++) {
     CDentry::linkage_t * linkage = it->second->get_linkage();
-    if (linkage && linkage->is_primary()) {
-      CInode * child = linkage->get_inode();
+    if (linkage) {
+      entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
+    }
+  }
+
+  // sort the list
+  std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) {
+    return A.first.compare(B.first);
+  });
+
+  for (auto it = entries.begin();
+       it != entries.end();
+       it++) {
+      CInode * child = it->second;
       pos_map[idx++] = child;
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
@@ -277,7 +290,6 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
       // string s;
       // child->make_path_string(s);
       // dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
-    }
   }
 //#ifdef PREDICTOR_DEBUG
 //  dout(0) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " epoch " << bal->beat_epoch << " load_matrix total: " << total_ss.str() << dendl;
