@@ -258,6 +258,8 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 //  std::stringstream total_ss;
 //#endif
 
+  dout(0) << __func__ << " mark 1" << dendl;
+
   load_matrix.clear();
   int idx = 0;
   vector<pair<boost::string_view, CInode*> > entries;
@@ -271,8 +273,15 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   }
 
   // sort the list
-  std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) {
-    return A.first.compare(B.first);
+  std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> bool {
+#undef dout_prefix
+#define dout_prefix *_dout << "mds.?.predictor "
+    dout(0) << __func__ << " mark 1: sort start." << dendl;
+    bool ret = A.first.compare(B.first);
+    dout(0) << __func__ << " mark 2: sort end." << dendl;
+#undef dout_prefix
+#define dout_prefix *_dout << "mds." << (bal ? std::to_string(bal->mds->get_nodeid()) : "?") << ".predictor "
+    return ret;
   });
 
   for (auto it = entries.begin();
