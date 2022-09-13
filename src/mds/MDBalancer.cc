@@ -273,6 +273,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   }
 
   // sort the list
+  /*
   std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> bool {
 #undef dout_prefix
 #define dout_prefix *_dout << "mds.?.predictor "
@@ -283,6 +284,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 #define dout_prefix *_dout << "mds." << (bal ? std::to_string(bal->mds->get_nodeid()) : "?") << ".predictor "
     return ret;
   });
+  */
 
   for (auto it = entries.begin();
        it != entries.end();
