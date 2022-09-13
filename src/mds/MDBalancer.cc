@@ -250,6 +250,13 @@ inline bool dirfrag_load_pred_t::use_parent_fast() {
     && cur_epoch == bal->beat_epoch && from_parent;
 }
 
+static int compare_inode(const void * pA, const void * pB)
+{
+  boost::string_view a_name = (*(const CInode **)(pA))->get_parent_dn()->get_name();
+  boost::string_view b_name = (*(const CInode **)(pB))->get_parent_dn()->get_name();
+  return a_name.compare(b_name);
+}
+
 vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 {
   if (!dir) return vector<LoadArray_Int>();
@@ -258,23 +265,25 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 //  std::stringstream total_ss;
 //#endif
 
-  dout(0) << __func__ << " mark 1" << dendl;
+  //dout(0) << __func__ << " mark 1" << dendl;
 
   load_matrix.clear();
-  int idx = 0;
-  vector<pair<boost::string_view, CInode*> > entries;
+  //vector<pair<boost::string_view, CInode*> > entries;
+  vector<CInode *> entries;
   for (auto it = dir->begin();
        it != dir->end();
        it++) {
     CDentry::linkage_t * linkage = it->second->get_linkage();
     if (linkage) {
-      entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
+      //entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
+      entries.push_back(linkage->get_inode());
     }
   }
 
   // sort the list
+  qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
   /*
-  std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> bool {
+  std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> int {
 #undef dout_prefix
 #define dout_prefix *_dout << "mds.?.predictor "
     dout(0) << __func__ << " mark 1: sort start." << dendl;
@@ -286,10 +295,12 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   });
   */
 
+  int idx = 0;
   for (auto it = entries.begin();
        it != entries.end();
        it++) {
-      CInode * child = it->second;
+      //CInode * child = it->second;
+      CInode * child = *it;
       pos_map[idx++] = child;
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
