@@ -281,7 +281,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   }
 
   // sort the list
-  qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
+  //qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
   /*
   std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> int {
 #undef dout_prefix
