@@ -282,7 +282,10 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
   }
 
   // sort the list
-  qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
+  // FIXME: NO NOT SORT: too heavy
+  if (g_conf->adsl_mds_load_pred_should_sort) {
+    qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
+  }
   /*
   std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> int {
 #undef dout_prefix
@@ -469,7 +472,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor)
     cur_load = cur_load ? ((cur_load + predicted_load) / 2) : predicted_load;
   }
 
-  dout(5) << __func__ << " dir " << (dir ? dir->get_path() : "NULLPTR") << " cur_load " << cur_load << dendl;
+  dout(10) << __func__ << " dir " << (dir ? dir->get_path() : "NULLPTR") << " cur_load " << cur_load << dendl;
   return cur_load;
 }
 
