@@ -274,15 +274,15 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
        it != dir->end();
        it++) {
     CDentry::linkage_t * linkage = it->second->get_linkage();
-    if (linkage) {
+    if (linkage && linkage->get_inode()) {
       //entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
       entries.push_back(linkage->get_inode());
-      dout(0) << __func__ << "  push inode " << linkage->get_inode() << dendl;
+      //dout(0) << __func__ << "  push inode " << linkage->get_inode() << dendl;
     }
   }
 
   // sort the list
-  //qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
+  qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
   /*
   std::sort(entries.begin(), entries.end(), [] (const pair<boost::string_view, CInode*> & A, const pair<boost::string_view, CInode*> & B) -> int {
 #undef dout_prefix
@@ -302,7 +302,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
        it++) {
       //CInode * child = it->second;
       CInode * child = *it;
-      dout(0) << __func__ << "  pop inode " << child << dendl;
+      //dout(0) << __func__ << "  pop inode " << child << dendl;
       if (!child)	continue;
       pos_map[idx++] = child;
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
