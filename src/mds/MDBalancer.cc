@@ -384,6 +384,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   }
 
   // dout(15) << __func__ << " mark #5" << dendl;
+  dout(0) << __func__ << " PREDICTOR_DEBUG " << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
 #ifdef PREDICTOR_DEBUG
   dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
 #endif
