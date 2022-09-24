@@ -312,9 +312,11 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 //      total_ss << cur_load.total() << ' ';
 //#endif
 
-      // string s;
-      // child->make_path_string(s);
-      // dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      if (dir->get_inode()->is_root()) {
+	 string s;
+      	 child->make_path_string(s);
+      	 dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
+      }
   }
 //#ifdef PREDICTOR_DEBUG
 //  dout(0) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " epoch " << bal->beat_epoch << " load_matrix total: " << total_ss.str() << dendl;
@@ -384,7 +386,9 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   }
 
   // dout(15) << __func__ << " mark #5" << dendl;
-  dout(0) << __func__ << " PREDICTOR_DEBUG " << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
+  if (dir->get_inode()->is_root()) {
+    dout(0) << __func__ << " PREDICTOR_DEBUG / After prediction, pred_load " << predicted << dendl;
+  }
 #ifdef PREDICTOR_DEBUG
   dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
 #endif
