@@ -4837,6 +4837,17 @@ void Server::handle_client_setxattr(MDRequestRef& mdr)
   if (!check_access(mdr, cur, MAY_WRITE))
     return;
 
+  if (name == "user.adsl.predictor") {
+    if (flags & CEPH_XATTR_REMOVE) {
+      cur->localize_predictor("");
+      dout(0) << "Remove private predictor. " << dendl;
+    } else {
+      string pred_version = req->get_data().to_str();
+      cur->localize_predictor(pred_version);
+      dout(0) << "Set private predictor " << pred_version << dendl;
+    }
+  }
+
   auto pxattrs = cur->get_projected_xattrs();
   size_t len = req->get_data().length();
   size_t inc = len + name.length();
@@ -4932,6 +4943,11 @@ void Server::handle_client_removexattr(MDRequestRef& mdr)
     dout(10) << "removexattr '" << name << "' and ENODATA on " << *cur << dendl;
     respond_to_request(mdr, -ENODATA);
     return;
+  }
+
+  if (name == "user.adsl.predictor") {
+    cur->localize_predictor("");
+    dout(0) << "Remove private predictor. " << dendl;
   }
 
   dout(10) << "removexattr '" << name << "' on " << *cur << dendl;

@@ -72,6 +72,13 @@ struct LoadArray {
   T& operator[](size_t i) { return nums[i]; }
   T* data() { return nums.data(); }
   const T* data() const { return nums.data(); }
+
+  void encode(bufferlist &bl) const {
+    ::encode(nums, bl);
+  }
+  void decode(bufferlist::iterator &p) {
+    ::decode(nums, p);
+  }
 };
 
 template <typename T>
@@ -88,6 +95,21 @@ std::ostream & operator<<(std::ostream & os, LoadArray<T> & la)
 
 using LoadArray_Int = LoadArray<int>;
 using LoadArray_Double = LoadArray<double>;
+
+};
+
+template <typename T>
+inline void encode(const adsl::LoadArray<T> &c, bufferlist &bl) {
+  c.encode(bl);
+}
+
+template <typename T>
+inline void decode(adsl::LoadArray<T> &c, bufferlist::iterator &p) {
+  c.decode(p);
+}
+
+
+namespace adsl {
 
 class dirfrag_load_t;
 

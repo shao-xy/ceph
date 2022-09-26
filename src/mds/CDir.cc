@@ -2455,6 +2455,8 @@ void CDir::encode_export(bufferlist& bl)
   ::encode(pop_me, bl);
   ::encode(pop_auth_subtree, bl);
 
+  ::encode(pop_pred, bl);
+
   ::encode(dir_rep_by, bl);  
   ::encode(get_replicas(), bl);
 
@@ -2495,6 +2497,8 @@ void CDir::decode_import(bufferlist::iterator& blp, utime_t now, LogSegment *ls)
   ::decode(pop_me, now, blp);
   ::decode(pop_auth_subtree, now, blp);
   pop_auth_subtree_nested.add(now, cache->decayrate, pop_auth_subtree);
+
+  ::decode(pop_pred, blp);
 
   ::decode(dir_rep_by, blp);
   ::decode(get_replicas(), blp);

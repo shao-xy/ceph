@@ -34,3 +34,16 @@ std::ostream & operator<< <CDir*>(std::ostream & os, dout_wrapper<CDir*> && wrap
     return os << "CDir[NUL]";
   }
 }
+
+template<>
+std::ostream & operator<< <CInode*>(std::ostream & os, dout_wrapper<CInode*> && wrapped)
+{
+  const CInode* inode = wrapped.m_t;
+  if (inode) {
+    string path;
+    inode->make_path_string(path, true);
+    return os << "CInode[" << inode << ' ' << inode->inode.ino << ' ' << (inode->is_multiversion() ? "... ":" ") << path << (inode->is_dir() ? "/":"") << (inode->use_pred ? (" p:" + inode->pred_version) : "") << "]";
+  } else {
+    return os << "CInode[NUL]";
+  }
+}

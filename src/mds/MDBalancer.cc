@@ -383,8 +383,34 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 
   // dout(15) << __func__ << " mark #4" << dendl;
 
+  string pred_name;
+  string pred_code;
+  CInode * _in = dir->get_inode();
+  auto pxattrs = _in->get_projected_xattrs();
+  if (pxattrs->count(mempool::mds_co::string(boost::string_view("user.adsl.predictor")))) {
+    pred_name = (*pxattrs)[mempool::mds_co::string(boost::string_view("user.adsl.predictor"))].c_str();
+    _in->localize_predictor(pred_name);
+    pred_code = _in->pred_code;
+    dout(10) << dout_wrapper<CInode*>(_in) << ' ' << dout_wrapper<CDir*>(dir) << " uses its private predictor " << pred_name << dendl;
+  } else {
+    pred_name = bal->pred_version;
+    pred_code = bal->pred_code;
+    dout(10) << dout_wrapper<CInode*>(_in) << ' ' << dout_wrapper<CDir*>(dir) << " uses global predictor." << dendl;
+  }
+  /*
+  if (_in->use_pred) {
+    pred_name = _in->pred_version;
+    pred_code = _in->pred_code;
+    dout(0) << dout_wrapper<CInode*>(_in) << ' ' << dout_wrapper<CDir*>(dir) << " uses its private predictor " << pred_name << dendl;
+  } else {
+    pred_name = bal->pred_version;
+    pred_code = bal->pred_code;
+    dout(0) << dout_wrapper<CInode*>(_in) << ' ' << dout_wrapper<CDir*>(dir) << " uses global predictor." << dendl;
+  }
+  */
+
   LoadArray_Double predicted;
-  if (predictor->predict(bal->pred_version, bal->pred_code, load_prepare(), predicted) < 0) {
+  if (predictor->predict(pred_name, pred_code, load_prepare(), predicted) < 0) {
     return -1;
   }
 

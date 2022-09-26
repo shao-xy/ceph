@@ -48,6 +48,8 @@
 #include "mds/MDSContinuation.h"
 #include "mds/InoTable.h"
 
+#include "mds/MDBalancer.h"
+
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds
 #undef dout_prefix
@@ -3645,6 +3647,13 @@ void CInode::encode_export(bufferlist& bl)
 
   _encode_file_locks(bl);
 
+  ::encode(last_load, bl);
+  ::encode(recent_load, bl);
+  ::encode(my_beat_epoch, bl);
+  ::encode(use_pred, bl);
+  ::encode(pred_code, bl);
+  ::encode(pred_version, bl);
+
   ENCODE_FINISH(bl);
 
   get(PIN_TEMPEXPORTING);
@@ -3738,6 +3747,13 @@ void CInode::decode_import(bufferlist::iterator& p,
   _decode_locks_full(p);
 
   _decode_file_locks(p);
+
+  ::decode(last_load, p);
+  ::decode(recent_load, p);
+  ::decode(my_beat_epoch, p);
+  ::decode(use_pred, p);
+  ::decode(pred_code, p);
+  ::decode(pred_version, p);
 
   DECODE_FINISH(p);
 }
@@ -4579,12 +4595,12 @@ void CInode::force_current_epoch(int epoch)
 
 void CInode::hit(int epoch)
 {
-  dout(1) << "CInode::hit start" << dendl;
+  //dout(1) << "CInode::hit start" << dendl;
   CInode * in = this;
   //while (in && (in->is_auth() || in->is_root())) {
   while (in) {
     in->load_mut.Lock();
-    dout(1) << "CInode::hit cur: " << *in << dendl;
+    //dout(1) << "CInode::hit cur: " << *in << dendl;
     in->_force_current_epoch(epoch);
     in->last_load++;
     in->load_mut.Unlock();
@@ -4592,7 +4608,7 @@ void CInode::hit(int epoch)
     if (!parent_dir)	break;
     in = parent_dir->get_inode();
   }
-  dout(1) << "CInode::hit end" << dendl;
+  //dout(1) << "CInode::hit end" << dendl;
 }
 
 adsl::LoadArray_Int CInode::get_loadarray(int epoch)
@@ -4613,4 +4629,67 @@ int CInode::get_global_depth()
     depth++;
   }
   return depth;
+}
+
+int CInode::localize_predictor(string pred_name)
+{
+  Mutex::Locker l(pred_mut);
+
+  if (pred_name == pred_version) {
+    return 0;
+  }
+
+  if (pred_name == "") {
+    // clear predictor
+    use_pred = false;
+    pred_code = "";
+    pred_version = "";
+    return 0;
+  }
+
+  // invoke code from MDBalancer::localize_predictor()
+
+  if (!mdcache->mds->balancer->predictor.need_read_rados(pred_name)) {
+    use_pred = true;
+    pred_code.assign("");
+    pred_version.assign(pred_name);
+    return 0;
+  }
+
+  /* reset everything */
+  bool ack = false;
+  int r = 0;
+  bufferlist script_src;
+  Mutex lock("pred_lock");
+  Cond cond;
+
+  /* we assume that predictor is in the metadata pool */
+  MDSRank * mds = mdcache->mds;
+  object_t oid = object_t(pred_name);
+  object_locator_t oloc(mds->mdsmap->get_metadata_pool());
+  ceph_tid_t tid = mds->objecter->read(oid, oloc, 0, 0, CEPH_NOSNAP, &script_src, 0,
+                                       new C_SafeCond(&lock, &cond, &ack, &r));
+  dout(15) << "launched non-blocking read tid=" << tid
+           << " oid=" << oid << " oloc=" << oloc << dendl;
+
+  /* timeout: if we waste half our time waiting for RADOS, then abort! */
+  double t = ceph_clock_now() + g_conf->mds_bal_interval/2;
+  utime_t timeout;
+  timeout.set_from_double(t);
+  lock.Lock();
+  int ret_t = cond.WaitUntil(lock, timeout);
+  lock.Unlock();
+
+  /* success: store the predictor in memory and set the version. */
+  if (!r) {
+    if (ret_t == ETIMEDOUT) {
+      mds->objecter->op_cancel(tid, -ECANCELED);
+      return -ETIMEDOUT;
+    }
+    use_pred = true;
+    pred_code.assign(script_src.to_str());
+    pred_version.assign(oid.name);
+    dout(10) << "localized predictor " << pred_name << " , pred_code=" << pred_code << dendl;
+  }
+  return r;
 }

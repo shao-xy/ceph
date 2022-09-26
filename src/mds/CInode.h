@@ -667,7 +667,9 @@ public:
     flocklock(this, &flocklock_type),
     policylock(this, &policylock_type),
     load_mut("CInode::load_mut"),
-    recent_load(RECENT_LOAD_EPOCH_LENGTH)
+    recent_load(RECENT_LOAD_EPOCH_LENGTH),
+    pred_mut("CInode::pred_mut"),
+    use_pred(false)
   {
     if (auth) state_set(STATE_AUTH);
   }
@@ -1164,6 +1166,14 @@ public:
   adsl::LoadArray_Int get_loadarray(int epoch);
 
   int get_global_depth();
+
+  // its own prediction
+  Mutex pred_mut;
+  bool use_pred;
+  string pred_code;
+  string pred_version;
+
+  int localize_predictor(string pred_name);
 
   // for MDBalancer::hit_dir(...) to check if this inode already hit
   //bool already_hit = false;
