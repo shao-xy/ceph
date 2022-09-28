@@ -4600,3 +4600,17 @@ adsl::LoadArray_Int CInode::get_loadarray(int epoch)
   force_current_epoch(epoch);
   return recent_load;
 }
+
+int CInode::get_global_depth()
+{
+  int depth = 0;
+  CInode * cur = this;
+  while (!cur->is_root()) {
+    cur = cur->get_parent_inode();
+    if (!cur || cur->is_stray()) {
+      return depth + 100;
+    }
+    depth++;
+  }
+  return depth;
+}

@@ -161,6 +161,10 @@ std::vector<Option> get_global_options() {
     .set_description("ADSLab: MDS predictor use load inherited from parent")
     .set_default(0),
 
+    Option("adsl_mds_predictor_debug_dir_level", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab: Show load matrix and result for directories within this depth.")
+    .set_default(0),
+
     Option("host", Option::TYPE_STR, Option::LEVEL_BASIC)
     .set_description("local hostname")
     .set_long_description("if blank, ceph assumes the short hostname (hostname -s)")

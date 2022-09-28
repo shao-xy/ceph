@@ -312,7 +312,7 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 //      total_ss << cur_load.total() << ' ';
 //#endif
 
-      if (dir->get_inode()->is_root()) {
+      if (dir->get_inode()->get_global_depth() < g_conf->adsl_mds_predictor_debug_dir_level) {
 	 string s;
       	 child->make_path_string(s);
       	 dout(0) << __func__ << ' ' << s << "->" << (idx-1) << ' ' << cur_load << dendl;
@@ -386,11 +386,12 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   }
 
   // dout(15) << __func__ << " mark #5" << dendl;
-  if (dir->get_inode()->is_root()) {
-    dout(0) << __func__ << " PREDICTOR_DEBUG / After prediction, pred_load " << predicted << dendl;
-  }
 #ifdef PREDICTOR_DEBUG
   dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
+#else
+  if (dir->get_inode()->get_global_depth() < g_conf->adsl_mds_predictor_debug_dir_level) {
+    dout(0) << __func__ << " PREDICTOR_DEBUG " << "[" << dir->dirfrag() << " " << dir->get_path() << "]" << " After prediction, pred_load " << predicted << dendl;
+  }
 #endif
 
   // set children first

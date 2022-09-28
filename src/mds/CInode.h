@@ -1163,6 +1163,8 @@ public:
   void hit(int epoch);
   adsl::LoadArray_Int get_loadarray(int epoch);
 
+  int get_global_depth();
+
   // for MDBalancer::hit_dir(...) to check if this inode already hit
   //bool already_hit = false;
 };
