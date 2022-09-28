@@ -28,6 +28,10 @@ load_matrix = {
 
 
 DEBUG = true
+function PRED_LOG (lvl, ...)
+	io.write(lvl .. ' ')
+	print(...)
+end
 --predicted = require("waterfall")
 predicted = require("lunule")
 print(table.concat(predicted, ","))

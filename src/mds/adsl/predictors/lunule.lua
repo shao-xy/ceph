@@ -57,9 +57,9 @@ function predict()
 	local all_hits = new_hits + old_hits
 	local alpha = (all_hits > 0) and (old_hits / all_hits) or 0.1
 	local beta = (subtree_size > 0) and ((subtree_size - num_of_old_entries) / subtree_size) or 0.1
-	print(alpha, beta)
 	if alpha < 0.1 then alpha = 0.1 end
 	if beta < 0.1 then beta = 0.1 end
+	PRED_LOG(0, 'alpha=' .. alpha .. ',beta=' .. beta)
 
 	-- Sum up all delta load (uniformly distribution)
 	local last_epoch_delta_total = 0
