@@ -161,8 +161,12 @@ std::vector<Option> get_global_options() {
     .set_description("ADSLab: MDS predictor use load inherited from parent")
     .set_default(0),
 
-    Option("adsl_mds_predictor_debug_dir_level", Option::TYPE_INT, Option::LEVEL_ADVANCED)
-    .set_description("ADSLab: Show load matrix and result for directories within this depth.")
+    Option("adsl_mds_predictor_debug_loadmat_dir_level", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab predictor: Show load matrix for directories within this depth.")
+    .set_default(0),
+
+    Option("adsl_mds_predictor_debug_result_dir_level", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab predictor: Show prediction result for directories within this depth.")
     .set_default(0),
 
     Option("adsl_mds_load_pred_should_sort", Option::TYPE_INT, Option::LEVEL_ADVANCED)

@@ -15,7 +15,8 @@
 /* note: no header guard */
 OPTION(adsl_mds_mon_debug_level, OPT_INT)
 OPTION(adsl_mds_predictor_use_parent_fast, OPT_INT)
-OPTION(adsl_mds_predictor_debug_dir_level, OPT_INT)
+OPTION(adsl_mds_predictor_debug_loadmat_dir_level, OPT_INT)
+OPTION(adsl_mds_predictor_debug_result_dir_level, OPT_INT)
 OPTION(adsl_mds_load_pred_should_sort, OPT_INT)
 OPTION(host, OPT_STR) // "" means that ceph will use short hostname
 OPTION(public_addr, OPT_ADDR)
