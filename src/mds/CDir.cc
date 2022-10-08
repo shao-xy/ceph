@@ -997,6 +997,11 @@ void CDir::split(int bits, list<CDir*>& subs, list<MDSInternalContextBase*>& wai
     f->pop_auth_subtree_nested = pop_auth_subtree_nested;
     f->pop_auth_subtree_nested.scale(fac);
 
+    // force to current epoch
+    pop_pred.meta_load();
+    f->pop_pred = pop_pred;
+    f->pop_pred.scale(fac);
+
     dout(10) << " subfrag " << *p << " " << *f << dendl;
     subfrags[n++] = f;
     subs.push_back(f);

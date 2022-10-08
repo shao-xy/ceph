@@ -238,11 +238,7 @@ namespace adsl {
 
 std::ostream& dirfrag_load_pred_t::print(std::ostream& out)
 {
-  if (dir) {
-    return out << '[' << dir->get_path() << " (" << cur_load << ',' << cur_epoch << ")/(" << predicted_load << ',' << predicted_epoch << ")]";
-  } else {
-    return out << "[ NULLPTR (" << cur_load << ',' << cur_epoch << ")/(" << predicted_load << ',' << predicted_epoch << ")]";
-  }
+  return out << '[' << dout_wrapper<CDir*>(dir) << " (" << cur_load << ',' << cur_epoch << ")/(" << predicted_load << ',' << predicted_epoch << ")]";
 }
 
 inline bool dirfrag_load_pred_t::use_parent_fast() {
@@ -359,29 +355,31 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     return -7;
   }
 
+  dout(20) << __func__ << " start " << *this << dendl;
+
   if (dir->inode->is_stray() || dir->inode->is_mdsdir())	return 0.0;
 
-  // dout(15) << __func__ << " mark #1" << dendl;
+  dout(20) << __func__ << "  mark #1" << *this << dendl;
 
   if (!bal) {
     dout(0) << __func__ << " fail: no balancer for dir " << dir->get_path() << dendl;
     return -1;
   }
 
-  // dout(15) << __func__ << " mark #2" << dendl;
+  dout(20) << __func__ << "  mark #2" << *this << dendl;
 
   if (predicted_epoch == bal->beat_epoch) {
     // already predicted?
     return 0;
   }
 
-  // dout(15) << __func__ << " mark #3" << dendl;
+  dout(20) << __func__ << "  mark #3" << *this << dendl;
 
   if (!predictor) {
     predictor = &bal->predictor;
   }
 
-  // dout(15) << __func__ << " mark #4" << dendl;
+  dout(20) << __func__ << "  mark #4" << *this << dendl;
 
   string pred_name;
   string pred_code;
@@ -414,12 +412,12 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     return -1;
   }
 
-  // dout(15) << __func__ << " mark #5" << dendl;
+  dout(20) << __func__ << "  mark #5" << *this << dendl;
 #ifdef PREDICTOR_DEBUG
-  dout(20) << __func__ << PREDICTOR_DEBUG << dir->get_path() << " After prediction, pred_load " << predicted << dendl;
+  dout(20) << __func__ << PREDICTOR_DEBUG << dout_wrapper<CDir*>(dir) << " After prediction, pred_load " << predicted << dendl;
 #else
   if (dir->get_inode()->get_global_depth() < g_conf->adsl_mds_predictor_debug_result_dir_level) {
-    dout(0) << __func__ << " PREDICTOR_DEBUG " << "[" << dir->dirfrag() << " " << dir->get_path() << "]" << " After prediction, pred_load " << predicted << dendl;
+    dout(0) << __func__ << " PREDICTOR_DEBUG " << dout_wrapper<CDir*>(dir) << " After prediction, pred_load " << predicted << dendl;
   }
 #endif
 
@@ -447,13 +445,13 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
     //}
   }
 
-  // dout(15) << __func__ << " mark #6" << dendl;
+  dout(20) << __func__ << "  mark #6" << *this << dendl;
 
   // set my predicted load
   //predicted_load = predicted.total();
   predicted_epoch = bal->beat_epoch;
   //dout(15) << __func__ << " Before end." << dendl;
-  dout(10) << __func__ << " CDir path: " << dir->get_path() << " (" << predicted_load << ',' << predicted_epoch << ") [" << ss.str() << "] " << dendl;
+  dout(10) << __func__ << dout_wrapper<CDir*>(dir) << " (" << predicted_load << ',' << predicted_epoch << ") [" << ss.str() << "] " << dendl;
 
   return 0;
 }
@@ -498,7 +496,7 @@ double dirfrag_load_pred_t::meta_load(Predictor * predictor)
     cur_load = cur_load ? ((cur_load + predicted_load) / 2) : predicted_load;
   }
 
-  dout(10) << __func__ << " dir " << (dir ? dir->get_path() : "NULLPTR") << " cur_load " << cur_load << dendl;
+  dout(10) << __func__ << dout_wrapper<CDir*>(dir) << " cur_load " << cur_load << dendl;
   return cur_load;
 }
 
