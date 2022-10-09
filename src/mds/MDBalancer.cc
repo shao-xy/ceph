@@ -386,7 +386,13 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   CInode * _in = dir->get_inode();
   auto pxattrs = _in->get_projected_xattrs();
   if (pxattrs->count(mempool::mds_co::string(boost::string_view("user.adsl.predictor")))) {
-    pred_name = (*pxattrs)[mempool::mds_co::string(boost::string_view("user.adsl.predictor"))].c_str();
+    bufferptr p = (*pxattrs)[mempool::mds_co::string(boost::string_view("user.adsl.predictor"))];
+    unsigned len = p.length();
+    char * cstr_pred_name = (char*) malloc((len+1) * sizeof(char));
+    memcpy(cstr_pred_name, p.c_str(), len);
+    cstr_pred_name[len] = '\0';
+    pred_name = string(cstr_pred_name);
+    free(cstr_pred_name);
     _in->localize_predictor(pred_name);
     pred_code = _in->pred_code;
     dout(10) << dout_wrapper<CInode*>(_in) << ' ' << dout_wrapper<CDir*>(dir) << " uses its private predictor " << pred_name << dendl;
