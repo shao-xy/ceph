@@ -263,22 +263,28 @@ vector<LoadArray_Int> dirfrag_load_pred_t::load_prepare()
 
   //dout(0) << __func__ << " mark 1" << dendl;
 
+  CInode * diri = dir->get_inode();
+  list<CDir*> dirs;
+  diri->get_dirfrags(dirs);
+
   load_matrix.clear();
   //vector<pair<boost::string_view, CInode*> > entries;
   vector<CInode *> entries;
-  for (auto it = dir->begin();
-       it != dir->end();
-       it++) {
-    CDentry::linkage_t * linkage = it->second->get_linkage();
-    if (linkage && linkage->get_inode()) {
-      //entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
-      entries.push_back(linkage->get_inode());
-      //dout(0) << __func__ << "  push inode " << linkage->get_inode() << dendl;
+  for (CDir * dirfrag : dirs) {
+    // We've already locked other dirs before prediction by pred_mut in the inode
+    for (auto it = dirfrag->begin();
+	 it != dirfrag->end();
+	 it++) {
+      CDentry::linkage_t * linkage = it->second->get_linkage();
+      if (linkage && linkage->get_inode()) {
+	//entries.push_back(std::make_pair<boost::string_view, CInode*>(it->second->get_name(), linkage->get_inode()));
+	entries.push_back(linkage->get_inode());
+	//dout(0) << __func__ << "  push inode " << linkage->get_inode() << dendl;
+      }
     }
   }
 
   // sort the list
-  // FIXME: NO NOT SORT: too heavy
   if (g_conf->adsl_mds_load_pred_should_sort) {
     qsort(entries.data(), entries.size(), sizeof(CInode*), compare_inode);
   }
@@ -384,6 +390,12 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   string pred_name;
   string pred_code;
   CInode * _in = dir->get_inode();
+  Mutex::Locker l(_in->pred_mut);
+  if (tried_predict_epoch == bal->beat_epoch) {
+    // already predicted by other siblings?
+    return 0;
+  }
+
   auto pxattrs = _in->get_projected_xattrs();
   if (pxattrs->count(mempool::mds_co::string(boost::string_view("user.adsl.predictor")))) {
     bufferptr p = (*pxattrs)[mempool::mds_co::string(boost::string_view("user.adsl.predictor"))];
@@ -430,7 +442,11 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   // set children first
   std::stringstream ss;
   int idx = 0;
-  predicted_load = 0;
+  list<CDir*> dirfrags;
+  _in->get_dirfrags(dirfrags);
+  for (CDir * dirfrag : dirfrags) {
+    dirfrag->pop_pred.predicted_load = 0;
+  }
   for (auto it = predicted.begin();
        it != predicted.end();
        it++) {
@@ -447,7 +463,7 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
       child_load.from_parent = true;
     }
     //if (in->is_auth()) {
-    predicted_load += *it;
+    in->get_parent_dir()->pop_pred.predicted_load += *it;
     //}
   }
 
@@ -455,7 +471,10 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
 
   // set my predicted load
   //predicted_load = predicted.total();
-  predicted_epoch = bal->beat_epoch;
+  for (CDir * dirfrag : dirfrags) {
+    dirfrag->pop_pred.predicted_epoch = bal->beat_epoch;
+  }
+
   //dout(15) << __func__ << " Before end." << dendl;
   dout(10) << __func__ << dout_wrapper<CDir*>(dir) << " (" << predicted_load << ',' << predicted_epoch << ") [" << ss.str() << "] " << dendl;
 
