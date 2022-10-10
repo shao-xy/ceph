@@ -669,6 +669,7 @@ public:
     load_mut("CInode::load_mut"),
     recent_load(RECENT_LOAD_EPOCH_LENGTH),
     pred_mut("CInode::pred_mut"),
+    pred_scatter_mut("CInode::pred_scatter_mut"),
     use_pred(false)
   {
     if (auth) state_set(STATE_AUTH);
@@ -1168,7 +1169,8 @@ public:
   int get_global_depth();
 
   // its own prediction
-  Mutex pred_mut;
+  Mutex pred_mut; // used to set predictor
+  Mutex pred_scatter_mut; // used within prediction
   bool use_pred;
   string pred_code;
   string pred_version;
