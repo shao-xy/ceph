@@ -1036,6 +1036,36 @@ void Migrator::export_sessions_flushed(CDir *dir, uint64_t tid)
     export_go(dir);     // start export.
 }
 
+class C_MDC_ExportWaitWrlock : public MigratorContext {
+  CDir *ex;   // dir i'm exporting
+  uint64_t tid;
+public:
+  C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t) :
+  MigratorContext(m), ex(e), tid(t){
+          assert(ex != NULL);
+        }
+  void finish(int r) override {
+    if (r >= 0)
+      mig->export_frozen(ex, tid);
+  }
+};
+
+class C_MDC_Retry_Export : public MigratorContext {
+  CDir *ex;   // dir i'm exporting
+  mds_rank_t peer;
+public:
+  C_MDC_Retry_Export(Migrator *m, CDir *e, mds_rank_t p) :
+  MigratorContext(m), ex(e), peer(p){
+          assert(ex != NULL);
+        }
+  void finish(int r) override {
+    if (r >= 0){
+      //dout(0) << __func__ <<" resend export msg: " << *ex << " to " << tid << dendl;
+      mig->export_dir_nicely(ex, peer);
+    }
+  }
+};
+
 void Migrator::export_frozen(CDir *dir, uint64_t tid)
 {
   dout(7) << "export_frozen on " << *dir << dendl;
@@ -1057,10 +1087,36 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
   get_export_lock_set(dir, rdlocks);
   if ((diri->is_auth() && diri->is_frozen()) ||
       !mds->locker->can_rdlock_set(rdlocks) ||
-      !diri->filelock.can_wrlock(-1) ||
       !diri->nestlock.can_wrlock(-1)) {
     dout(7) << "export_dir couldn't acquire all needed locks, failing. "
 	    << *dir << dendl;
+    // .. unwind ..
+    dir->unfreeze_tree();
+    cache->try_subtree_merge(dir);
+
+    mds->send_message_mds(new MExportDirCancel(dir->dirfrag(), it->second.tid), it->second.peer);
+    export_state.erase(it);
+
+    dir->state_clear(CDir::STATE_EXPORTING);
+    cache->maybe_send_pending_resolves();
+    return;
+  }
+
+  if (!diri->filelock.can_wrlock(-1)) {
+    if (g_conf->adsl_mds_migmode == 2){
+      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid));
+      dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+	      << *dir << dendl;
+      return;
+    } else if (g_conf->adsl_mds_migmode == 1) {
+      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_Retry_Export(this, dir, it->second.peer));
+      dout(7) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
+	      << *dir << dendl;
+    } else {
+      dout(7) << "export_dir couldn't acquire filelock, failing. "
+	      << *dir << dendl;
+    }
+
     // .. unwind ..
     dir->unfreeze_tree();
     cache->try_subtree_merge(dir);
