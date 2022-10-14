@@ -46,7 +46,7 @@
 #include "common/config.h"
 
 
-#define dout_subsys ceph_subsys_mds
+#define dout_subsys ceph_subsys_mds_locker
 #undef dout_prefix
 #define dout_context g_ceph_context
 #define dout_prefix _prefix(_dout, mds)
