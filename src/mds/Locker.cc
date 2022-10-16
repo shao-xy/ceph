@@ -417,11 +417,9 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
        ++p) {
     MDSCacheObject *object = *p;
     if (mdr->is_auth_pinned(object)) {
-      //dout(10) << " already auth_pinned " << *object << dendl;
-      dout(0) << " already auth_pinned " << *object << dendl;
+      dout(10) << " already auth_pinned " << *object << dendl;
     } else if (object->is_auth()) {
-      //dout(10) << " auth_pinning " << *object << dendl;
-      dout(0) << " auth_pinning " << *object << dendl;
+      dout(10) << " auth_pinning " << *object << dendl;
       mdr->auth_pin(object);
     }
   }
