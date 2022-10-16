@@ -381,7 +381,8 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	drop_locks(mdr.get());
       if (object->is_ambiguous_auth()) {
 	// wait
-	dout(10) << " ambiguous auth, waiting to authpin " << *object << dendl;
+	//dout(10) << " ambiguous auth, waiting to authpin " << *object << dendl;
+	dout(0) << " ambiguous auth, waiting to authpin " << *object << dendl;
 	object->add_waiter(MDSCacheObject::WAIT_SINGLEAUTH, new C_MDS_RetryRequest(mdcache, mdr));
 	mdr->drop_local_auth_pins();
 	return false;
@@ -394,11 +395,13 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
       drop_locks(mdr.get());
       mdr->drop_local_auth_pins();
       if (auth_pin_nonblock) {
-	dout(10) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
+	//dout(10) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
+	dout(0) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
 	mdr->aborted = true;
 	return false;
       }
-      dout(10) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
+      //dout(10) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
+      dout(0) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
       object->add_waiter(MDSCacheObject::WAIT_UNFREEZE, new C_MDS_RetryRequest(mdcache, mdr));
 
       if (!mdr->remote_auth_pins.empty())
@@ -414,9 +417,11 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
        ++p) {
     MDSCacheObject *object = *p;
     if (mdr->is_auth_pinned(object)) {
-      dout(10) << " already auth_pinned " << *object << dendl;
+      //dout(10) << " already auth_pinned " << *object << dendl;
+      dout(0) << " already auth_pinned " << *object << dendl;
     } else if (object->is_auth()) {
-      dout(10) << " auth_pinning " << *object << dendl;
+      //dout(10) << " auth_pinning " << *object << dendl;
+      dout(0) << " auth_pinning " << *object << dendl;
       mdr->auth_pin(object);
     }
   }
