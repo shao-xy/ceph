@@ -1435,12 +1435,20 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
   }
   assert(it->second.state == EXPORT_PREPPING);
 
+#ifdef ADSL_MDS_MIG_DEBUG
+  dout(0) << __func__ << " mark #1 " << dout_wrapper<CDir*>(dir) << dendl;
+#endif
+
   if (!m->is_success()) {
     dout(7) << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
     export_try_cancel(dir, false);
     m->put();
     return;
   }
+
+#ifdef ADSL_MDS_MIG_DEBUG
+  dout(0) << __func__ << " mark #2 " << dout_wrapper<CDir*>(dir) << dendl;
+#endif
 
   assert (g_conf->mds_kill_export_at != 5);
   // send warnings
@@ -1478,6 +1486,9 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
     
   // done.
   m->put();
+#ifdef ADSL_MDS_MIG_DEBUG
+  dout(0) << __func__ << " end " << dout_wrapper<CDir*>(dir) << dendl;
+#endif
 }
 
 
