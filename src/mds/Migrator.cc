@@ -1056,14 +1056,15 @@ void Migrator::export_sessions_flushed(CDir *dir, uint64_t tid)
 class C_MDC_ExportWaitWrlock : public MigratorContext {
   CDir *ex;   // dir i'm exporting
   uint64_t tid;
+  set<SimpleLock*> rdlocks; // copy constructor
 public:
-  C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t) :
-  MigratorContext(m), ex(e), tid(t){
+  C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t, set<SimpleLock*> & rdlocks_) :
+    MigratorContext(m), ex(e), tid(t), rdlocks(rdlocks_) {
           assert(ex != NULL);
         }
   void finish(int r) override {
     if (r >= 0)
-      mig->export_frozen(ex, tid);
+      mig->export_frozen_with_locks(ex, tid, rdlocks);
   }
 };
 
@@ -1143,7 +1144,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
 
   if (!diri->filelock.can_wrlock(-1)) {
     if (g_conf->adsl_mds_migmode == 2){
-      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid));
+      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
 #ifdef ADSL_MDS_MIG_DEBUG
       dout(0) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
 	      << *dir << dendl;
@@ -1173,9 +1174,25 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
     return;
   }
 
+  export_frozen_with_locks(dir, tid, rdlocks);
+}
+
+void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*> & rdlocks)
+{
+  map<CDir*,export_state_t>::iterator it = export_state.find(dir);
+  if (it == export_state.end() || it->second.tid != tid) {
+    dout(7) << "export must have aborted" << dendl;
+#ifdef ADSL_MDS_MIG_DEBUG
+    dout(0) << __func__ << " export must have aborted " << dout_wrapper<CDir*>(dir) << dendl;
+#endif
+    return;
+  }
+
 #ifdef ADSL_MDS_MIG_DEBUG
   dout(0) << __func__ << " mark #3 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
+
+  CInode *diri = dir->get_inode();
 
   it->second.mut = new MutationImpl();
   if (diri->is_auth())

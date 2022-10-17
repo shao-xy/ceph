@@ -45,6 +45,7 @@
 
 #include "common/config.h"
 
+#define ADSL_MDS_LOCKER_DEBUG
 
 #define dout_subsys ceph_subsys_mds_locker
 #undef dout_prefix
@@ -401,7 +402,14 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	return false;
       }
       //dout(10) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
-      dout(0) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
+#ifdef ADSL_MDS_LOCKER_DEBUG
+      dout(0) << " can't auth_pin (freezing?), waiting to authpin " << *object
+	      << "   authority(): " << object->authority()
+	      << "   is_auth(): " << object->is_auth()
+	      << "   is_freezing(): " << object->is_freezing()
+	      << "   is_frozen(): " << object->is_frozen()
+	      << dendl;
+#endif
       object->add_waiter(MDSCacheObject::WAIT_UNFREEZE, new C_MDS_RetryRequest(mdcache, mdr));
 
       if (!mdr->remote_auth_pins.empty())

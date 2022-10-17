@@ -147,6 +147,7 @@ protected:
 
   void handle_export_discover_ack(MExportDirDiscoverAck *m);
   void export_frozen(CDir *dir, uint64_t tid);
+  void export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*> & rdlocks);
   void check_export_size(CDir *dir, export_state_t& stat, set<client_t> &client_set);
   void handle_export_prep_ack(MExportDirPrepAck *m);
   void export_sessions_flushed(CDir *dir, uint64_t tid);
