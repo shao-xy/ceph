@@ -1192,6 +1192,11 @@ void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*
   dout(0) << __func__ << " mark #3 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
+  // check again
+  set<SimpleLock*> _rdlocks;
+  get_export_lock_set(dir, _rdlocks);
+  dout(0) << __func__ << " rdlocks check the same: " << (rdlocks == _rdlocks) << dendl;
+
   CInode *diri = dir->get_inode();
 
   it->second.mut = new MutationImpl();
@@ -1441,6 +1446,9 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
 
   if (!m->is_success()) {
     dout(7) << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
+#ifdef ADSL_MDS_MIG_DEBUG
+    dout(0) << ADSL_MDS_MIG_DEBUG << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
+#endif
     export_try_cancel(dir, false);
     m->put();
     return;
