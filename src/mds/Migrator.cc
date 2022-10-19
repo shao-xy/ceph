@@ -1053,6 +1053,8 @@ void Migrator::export_sessions_flushed(CDir *dir, uint64_t tid)
     export_go(dir);     // start export.
 }
 
+#undef dout_prefix
+#define dout_prefix *_dout << "mds." << mig->mds->get_nodeid() << ".migrator "
 class C_MDC_ExportWaitWrlock : public MigratorContext {
   CDir *ex;   // dir i'm exporting
   uint64_t tid;
@@ -1063,8 +1065,14 @@ public:
   C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t) :
     MigratorContext(m), ex(e), tid(t) {
           assert(ex != NULL);
+#ifdef ADSL_MDS_MIG_DEBUG
+	  dout(0) << "C_MDC_Retry_Export::" << __func__ << " initialize export msg: " << *ex << " tid " << tid << dendl;
+#endif
         }
   void finish(int r) override {
+#ifdef ADSL_MDS_MIG_DEBUG
+    dout(0) << "C_MDC_Retry_Export::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " r=" << r << dendl;
+#endif
     if (r >= 0)
       mig->export_frozen(ex, tid);
       //mig->export_frozen_with_locks(ex, tid, rdlocks);
@@ -1087,6 +1095,8 @@ public:
   }
 };
 
+#undef dout_prefix
+#define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".migrator "
 void Migrator::export_frozen(CDir *dir, uint64_t tid)
 {
   dout(7) << "export_frozen on " << *dir << dendl;
