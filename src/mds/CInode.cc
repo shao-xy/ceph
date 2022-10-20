@@ -55,6 +55,9 @@
 #undef dout_prefix
 #define dout_prefix *_dout << "mds." << mdcache->mds->get_nodeid() << ".cache.ino(" << inode.ino << ") "
 
+#ifndef ADSL_MDS_MIG_DEBUG
+#define ADSL_MDS_MIG_DEBUG
+#endif
 
 class CInodeIOContext : public MDSIOContextBase
 {
@@ -2294,6 +2297,15 @@ void CInode::take_dir_waiting(frag_t fg, list<MDSInternalContextBase*>& ls)
 
 void CInode::add_waiter(uint64_t tag, MDSInternalContextBase *c) 
 {
+#ifdef ADSL_MDS_MIG_DEBUG
+  if (tag == ((SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE) << (8+10*SimpleLock::WAIT_BITS))) { // bits are from SimpleLock::get_wait_shift()
+    dout(0) << "add_waiter tag " << std::hex << tag << std::dec << " " << c
+	    << " !ambig " << !state_test(STATE_AMBIGUOUSAUTH)
+	    << " !frozen " << !is_frozen_inode()
+	    << " !freezing " << !is_freezing_inode()
+	    << dendl;
+  }
+#endif
   dout(10) << "add_waiter tag " << std::hex << tag << std::dec << " " << c
 	   << " !ambig " << !state_test(STATE_AMBIGUOUSAUTH)
 	   << " !frozen " << !is_frozen_inode()
@@ -2314,6 +2326,11 @@ void CInode::add_waiter(uint64_t tag, MDSInternalContextBase *c)
 
 void CInode::take_waiting(uint64_t mask, list<MDSInternalContextBase*>& ls)
 {
+#ifdef ADSL_MDS_MIG_DEBUG
+  if (mask == ((SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE) << (8+10*SimpleLock::WAIT_BITS))) { // bits are from SimpleLock::get_wait_shift()
+    dout(0) << "CInode::" << __func__ << " mask " << std::hex << mask << std::dec << dendl;
+  }
+#endif
   if ((mask & WAIT_DIR) && !waiting_on_dir.empty()) {
     // take all dentry waiters
     while (!waiting_on_dir.empty()) {
