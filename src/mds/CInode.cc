@@ -2327,7 +2327,7 @@ void CInode::add_waiter(uint64_t tag, MDSInternalContextBase *c)
 void CInode::take_waiting(uint64_t mask, list<MDSInternalContextBase*>& ls)
 {
 #ifdef ADSL_MDS_MIG_DEBUG
-  if (mask == ((SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE) << (8+10*SimpleLock::WAIT_BITS))) { // bits are from SimpleLock::get_wait_shift()
+  if (mask == ((SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE) << filelock.get_wait_shift())) { // bits are from SimpleLock::get_wait_shift()
     dout(0) << "CInode::" << __func__ << " mask " << std::hex << mask << std::dec << dendl;
   }
 #endif

@@ -1058,23 +1058,24 @@ void Migrator::export_sessions_flushed(CDir *dir, uint64_t tid)
 class C_MDC_ExportWaitWrlock : public MigratorContext {
   CDir *ex;   // dir i'm exporting
   uint64_t tid;
+  int count;
   //set<SimpleLock*> rdlocks; // copy constructor
 public:
   //C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t, set<SimpleLock*> & rdlocks_) :
   //	MigratorContext(m), ex(e), tid(t), rdlocks(rdlocks_) {
-  C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t) :
-    MigratorContext(m), ex(e), tid(t) {
+  C_MDC_ExportWaitWrlock(Migrator *m, CDir *e, uint64_t t, int c) :
+    MigratorContext(m), ex(e), tid(t), count(c) {
           assert(ex != NULL);
 #ifdef ADSL_MDS_MIG_DEBUG
-	  dout(0) << "C_MDC_Retry_Export::" << __func__ << " initialize export msg: " << *ex << " tid " << tid << dendl;
+	  dout(0) << "C_MDC_ExportWaitWrlock::" << __func__ << " initialize export msg: " << *ex << " tid " << tid << " count " << count << dendl;
 #endif
         }
   void finish(int r) override {
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << "C_MDC_Retry_Export::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " r=" << r << dendl;
+    dout(0) << "C_MDC_Retry_Export::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " count " << count << " r=" << r << dendl;
 #endif
     if (r >= 0)
-      mig->export_frozen(ex, tid);
+      mig->export_frozen(ex, tid, count);
       //mig->export_frozen_with_locks(ex, tid, rdlocks);
   }
 };
@@ -1097,11 +1098,15 @@ public:
 
 #undef dout_prefix
 #define dout_prefix *_dout << "mds." << mds->get_nodeid() << ".migrator "
-void Migrator::export_frozen(CDir *dir, uint64_t tid)
+void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
 {
   dout(7) << "export_frozen on " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  if (count > 0) {
+    dout(0) << __func__ << " tid " << tid << " count " << count << " " << *dir << dendl;
+  } else {
+    dout(0) << __func__ << " tid " << tid << " " << *dir << dendl;
+  }
 #endif
 
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
@@ -1158,7 +1163,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid)
   if (!diri->filelock.can_wrlock(-1)) {
     if (g_conf->adsl_mds_migmode == 2){
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
-      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid));
+      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
       dout(0) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
 	      << *dir << dendl;
