@@ -1163,15 +1163,20 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
   if (!diri->filelock.can_wrlock(-1)) {
     if (g_conf->adsl_mds_migmode == 2){
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
-      diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
+      if (count == 0 || mds->get_nodeid() == 0) {
+	diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
-      dout(0) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
-	      << *dir << dendl;
+	dout(0) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+		<< *dir << dendl;
 #else
-      dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
-	      << *dir << dendl;
+	dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+		<< *dir << dendl;
 #endif
-      return;
+	return;
+      } else {
+	dout(0) << "couldn't acquire filelock AGAIN, failing. "
+	      << *dir << dendl;
+      }
     } else if (g_conf->adsl_mds_migmode == 1) {
       diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_Retry_Export(this, dir, it->second.peer));
       dout(7) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
