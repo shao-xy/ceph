@@ -55,8 +55,11 @@
 #undef dout_prefix
 #define dout_prefix *_dout << "mds." << mdcache->mds->get_nodeid() << ".cache.ino(" << inode.ino << ") "
 
-#ifndef ADSL_MDS_MIG_DEBUG
-#define ADSL_MDS_MIG_DEBUG
+//#ifndef ADSL_MDS_MIG_DEBUG
+//#define ADSL_MDS_MIG_DEBUG
+//#endif
+#ifdef ADSL_MDS_MIG_DEBUG
+#undef ADSL_MDS_MIG_DEBUG
 #endif
 
 class CInodeIOContext : public MDSIOContextBase

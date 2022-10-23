@@ -2805,8 +2805,8 @@ bool CDir::freeze_tree()
 
 void CDir::_freeze_tree()
 {
-  //dout(10) << "_freeze_tree " << *this << dendl;
-  dout(0) << "_freeze_tree " << *this << dendl;
+  dout(10) << "_freeze_tree " << *this << dendl;
+  //dout(0) << "_freeze_tree " << *this << dendl;
   assert(is_freezeable(true));
 
   // twiddle state

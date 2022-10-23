@@ -76,7 +76,7 @@
 #include "common/config.h"
 
 #include "adsl/dout_wrapper.h"
-#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
+//#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds_migrator
@@ -877,7 +877,7 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
 
   CDir *dir = mdr->more()->export_dir;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
   map<CDir*,export_state_t>::iterator it = export_state.find(dir);
   if (it == export_state.end() || it->second.tid != mdr->reqid.tid) {
@@ -962,7 +962,7 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
   dir->add_waiter(CDir::WAIT_FROZEN, new C_MDC_ExportFreeze(this, dir, it->second.tid));
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << " end." << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << " end." << dendl;
 #endif
 }
 
@@ -982,7 +982,7 @@ void Migrator::handle_export_discover_ack(MExportDirDiscoverAck *m)
   dout(7) << "export_discover_ack from " << m->get_source()
 	  << " on " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " from " << m->get_source()
+  dout(1) << __func__ << " from " << m->get_source()
 	  << " on " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
@@ -1007,7 +1007,7 @@ void Migrator::handle_export_discover_ack(MExportDirDiscoverAck *m)
       dir->auth_unpin(this);
       assert(g_conf->mds_kill_export_at != 3);
 #ifdef ADSL_MDS_MIG_DEBUG
-      dout(0) << __func__ << " from " << m->get_source()
+      dout(1) << __func__ << " from " << m->get_source()
 	      << " on " << dout_wrapper<CDir*>(dir) << " successful." << dendl;
 #endif
 
@@ -1067,12 +1067,12 @@ public:
     MigratorContext(m), ex(e), tid(t), count(c) {
           assert(ex != NULL);
 #ifdef ADSL_MDS_MIG_DEBUG
-	  dout(0) << "C_MDC_ExportWaitWrlock::" << __func__ << " initialize export msg: " << *ex << " tid " << tid << " count " << count << dendl;
+	  dout(1) << "C_MDC_ExportWaitWrlock::" << __func__ << " initialize export msg: " << *ex << " tid " << tid << " count " << count << dendl;
 #endif
         }
   void finish(int r) override {
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << "C_MDC_Retry_Export::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " count " << count << " r=" << r << dendl;
+    dout(1) << "C_MDC_ExportWaitWrlock::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " count " << count << " r=" << r << dendl;
 #endif
     if (r >= 0)
       mig->export_frozen(ex, tid, count);
@@ -1103,9 +1103,9 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
   dout(7) << "export_frozen on " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
   if (count > 0) {
-    dout(0) << __func__ << " tid " << tid << " count " << count << " " << *dir << dendl;
+    dout(1) << __func__ << " tid " << tid << " count " << count << " " << *dir << dendl;
   } else {
-    dout(0) << __func__ << " tid " << tid << " " << *dir << dendl;
+    dout(1) << __func__ << " tid " << tid << " " << *dir << dendl;
   }
 #endif
 
@@ -1113,13 +1113,13 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
   if (it == export_state.end() || it->second.tid != tid) {
     dout(7) << "export must have aborted" << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << __func__ << " export must have aborted " << dout_wrapper<CDir*>(dir) << dendl;
+    dout(1) << __func__ << " export must have aborted " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
     return;
   }
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " mark #1 " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " mark #1 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   assert(it->second.state == EXPORT_FREEZING);
@@ -1133,13 +1133,13 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
   get_export_lock_set(dir, rdlocks);
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " mark #2 " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " mark #2 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
   if ((diri->is_auth() && diri->is_frozen()) ||
       !mds->locker->can_rdlock_set(rdlocks) ||
       !diri->nestlock.can_wrlock(-1)) {
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << "export_dir couldn't acquire all needed locks, failing. "
+    dout(1) << "export_dir couldn't acquire all needed locks, failing. "
 	    << *dir << dendl;
 #else
     dout(7) << "export_dir couldn't acquire all needed locks, failing. "
@@ -1155,7 +1155,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
     dir->state_clear(CDir::STATE_EXPORTING);
     cache->maybe_send_pending_resolves();
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << __func__ << " export_dir rollback. " << dout_wrapper<CDir*>(dir) << dendl;
+    dout(1) << __func__ << " export_dir rollback. " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
     return;
   }
@@ -1166,7 +1166,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
       if (count == 0 || mds->get_nodeid() == 0) {
 	diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
-	dout(0) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+	dout(1) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
 		<< *dir << dendl;
 #else
 	dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
@@ -1174,14 +1174,22 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
 #endif
 	return;
       } else {
-	dout(0) << "couldn't acquire filelock AGAIN, failing. "
-	      << *dir << dendl;
+	dout(7) << "couldn't acquire filelock AGAIN, failing. "
+		<< *dir << dendl;
       }
     } else if (g_conf->adsl_mds_migmode == 1) {
       diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_Retry_Export(this, dir, it->second.peer));
+#ifdef ADSL_MDS_MIG_DEBUG
+      dout(1) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
+	      << *dir << dendl;
+#endif
       dout(7) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
 	      << *dir << dendl;
     } else {
+#ifdef ADSL_MDS_MIG_DEBUG
+      dout(1) << "export_dir couldn't acquire filelock, failing. "
+	      << *dir << dendl;
+#endif
       dout(7) << "export_dir couldn't acquire filelock, failing. "
 	      << *dir << dendl;
     }
@@ -1208,7 +1216,7 @@ void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*
   if (it == export_state.end() || it->second.tid != tid) {
     dout(7) << "export must have aborted" << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << __func__ << " export must have aborted " << dout_wrapper<CDir*>(dir) << dendl;
+    dout(1) << __func__ << " export must have aborted " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
     return;
   }
@@ -1216,13 +1224,13 @@ void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*
   // check again
   set<SimpleLock*> _rdlocks;
   get_export_lock_set(dir, _rdlocks);
-  dout(0) << __func__ << " rdlocks check the same: " << (rdlocks == _rdlocks) << dendl;
+  dout(1) << __func__ << " rdlocks check the same: " << (rdlocks == _rdlocks) << dendl;
 
   CInode *diri = dir->get_inode();
   */
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " mark #3 " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " mark #3 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   it->second.mut = new MutationImpl();
@@ -1352,7 +1360,7 @@ void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*
     gather.activate();
   }
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << " end. " << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << " end. " << dendl;
 #endif
 }
 
@@ -1450,7 +1458,7 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
 
   dout(7) << "export_prep_ack " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   mds->hit_export_target(now, dest, -1);
@@ -1467,13 +1475,13 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
   assert(it->second.state == EXPORT_PREPPING);
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " mark #1 " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " mark #1 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   if (!m->is_success()) {
     dout(7) << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-    dout(0) << ADSL_MDS_MIG_DEBUG << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
+    dout(1) << ADSL_MDS_MIG_DEBUG << "peer couldn't acquire all needed locks or wasn't active, canceling" << dendl;
 #endif
     export_try_cancel(dir, false);
     m->put();
@@ -1481,7 +1489,7 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
   }
 
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " mark #2 " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " mark #2 " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   assert (g_conf->mds_kill_export_at != 5);
@@ -1521,7 +1529,7 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
   // done.
   m->put();
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " end " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " end " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 }
 
@@ -1565,7 +1573,7 @@ void Migrator::export_go_synced(CDir *dir, uint64_t tid)
 
   dout(7) << "export_go_synced " << *dir << " to " << dest << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   cache->show_subtrees();
@@ -1908,7 +1916,7 @@ void Migrator::handle_export_ack(MExportDirAck *m)
   // yay!
   dout(7) << "handle_export_ack " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   mds->hit_export_target(now, dest, -1);
@@ -2067,7 +2075,7 @@ void Migrator::export_logged_finish(CDir *dir)
 {
   dout(7) << "export_logged_finish " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   export_state_t& stat = export_state[dir];
@@ -2178,7 +2186,7 @@ void Migrator::export_finish(CDir *dir)
 {
   dout(5) << "export_finish " << *dir << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   assert (g_conf->mds_kill_export_at != 12);
@@ -2225,7 +2233,7 @@ void Migrator::export_finish(CDir *dir)
 
   dout(7) << "export_finish unfreezing" << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
-  dout(0) << __func__ << " unfreezing " << dout_wrapper<CDir*>(dir) << dendl;
+  dout(1) << __func__ << " unfreezing " << dout_wrapper<CDir*>(dir) << dendl;
 #endif
 
   // unfreeze tree, with possible subtree merge.

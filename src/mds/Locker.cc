@@ -45,7 +45,7 @@
 
 #include "common/config.h"
 
-#define ADSL_MDS_LOCKER_DEBUG
+//#define ADSL_MDS_LOCKER_DEBUG
 
 #define dout_subsys ceph_subsys_mds_locker
 #undef dout_prefix
@@ -382,8 +382,11 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	drop_locks(mdr.get());
       if (object->is_ambiguous_auth()) {
 	// wait
-	//dout(10) << " ambiguous auth, waiting to authpin " << *object << dendl;
+#ifdef ADSL_MDS_LOCKER_DEBUG
 	dout(0) << " ambiguous auth, waiting to authpin " << *object << dendl;
+#else
+	dout(10) << " ambiguous auth, waiting to authpin " << *object << dendl;
+#endif
 	object->add_waiter(MDSCacheObject::WAIT_SINGLEAUTH, new C_MDS_RetryRequest(mdcache, mdr));
 	mdr->drop_local_auth_pins();
 	return false;
@@ -396,12 +399,14 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
       drop_locks(mdr.get());
       mdr->drop_local_auth_pins();
       if (auth_pin_nonblock) {
-	//dout(10) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
+#ifdef ADSL_MDS_LOCKER_DEBUG
 	dout(0) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
+#else
+	dout(10) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
+#endif
 	mdr->aborted = true;
 	return false;
       }
-      //dout(10) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
 #ifdef ADSL_MDS_LOCKER_DEBUG
       dout(0) << " can't auth_pin (freezing?), waiting to authpin " << *object
 	      << "   authority(): " << object->authority()
@@ -409,6 +414,8 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	      << "   is_freezing(): " << object->is_freezing()
 	      << "   is_frozen(): " << object->is_frozen()
 	      << dendl;
+#else
+      dout(10) << " can't auth_pin (freezing?), waiting to authpin " << *object << dendl;
 #endif
       object->add_waiter(MDSCacheObject::WAIT_UNFREEZE, new C_MDS_RetryRequest(mdcache, mdr));
 
