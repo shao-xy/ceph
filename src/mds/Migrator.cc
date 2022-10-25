@@ -1164,7 +1164,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
     if (g_conf->adsl_mds_migmode == 2){
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
       //if (count == 0 || mds->get_nodeid() == 0) {
-      if (mds->get_nodeid() == 0) {
+      if (diri->authority().first == mds->get_nodeid()) {
 	diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
 	dout(1) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
