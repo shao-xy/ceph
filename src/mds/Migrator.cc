@@ -1071,6 +1071,12 @@ public:
 #endif
         }
   void finish(int r) override {
+    ostringstream oss;
+    oss << BackTrace(1);
+    dout(0) << "  Calling stack:\n" << oss.str() << dendl;
+    SimpleLock & filelock = ex->get_inode()->filelock;
+    int state = filelock.get_state();
+    dout(0) << "C_MDC_ExportWaitWrlock::" << __func__ << " " << dout_wrapper<CDir*>(ex) << " tid " << tid << " can_wrlock=" << filelock.can_wrlock(-1) << " state=" << state << " sm_t::states[state].can_wrlock=" << (int)filelock.get_sm()->states[state].can_wrlock << dendl;
 #ifdef ADSL_MDS_MIG_DEBUG
     dout(1) << "C_MDC_ExportWaitWrlock::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " count " << count << " r=" << r << dendl;
 #endif
