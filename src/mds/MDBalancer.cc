@@ -1408,7 +1408,11 @@ void MDBalancer::find_exports(CDir *dir,
       if (!subdir->is_auth()) continue;
       if (already_exporting.count(subdir)) continue;
 
+      dout(15) << "   subdir candidate " << *subdir << dendl;
+
       if (subdir->is_frozen()) continue;  // can't export this right now!
+      CDir * subdir_pred_dir = subdir->pop_pred.get_dir();
+      dout(15) << "   subdir not frozen " << *subdir << " " << subdir << " pred->dir: " << dout_wrapper<CDir*>(subdir_pred_dir) << dendl;
 
       // how popular?
       //double pop = subdir->pop_auth_subtree.meta_load(rebalance_time, mds->mdcache->decayrate);
