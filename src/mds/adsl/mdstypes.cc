@@ -27,8 +27,8 @@ dirfrag_load_pred_t::dirfrag_load_pred_t(const dirfrag_load_pred_t & another)
 
 void dirfrag_load_pred_t::operator=(const dirfrag_load_pred_t & another)
 {
-  this->dir = another.dir;
-  this->bal = another.bal;
+  //this->dir = another.dir;
+  //this->bal = another.bal;
   this->predicted_load = another.predicted_load;
   this->predicted_epoch = another.predicted_epoch;
   this->tried_predict_epoch = another.tried_predict_epoch;
