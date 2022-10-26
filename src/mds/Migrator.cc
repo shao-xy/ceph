@@ -1071,18 +1071,21 @@ public:
 #endif
         }
   void finish(int r) override {
+    SimpleLock & filelock = ex->get_inode()->filelock;
+#ifdef ADSL_MDS_MIG_DEBUG
     ostringstream oss;
     oss << BackTrace(1);
-    dout(0) << "  Calling stack:\n" << oss.str() << dendl;
-    SimpleLock & filelock = ex->get_inode()->filelock;
+    dout(20) << "  Calling stack:\n" << oss.str() << dendl;
     int state = filelock.get_state();
-    dout(0) << "C_MDC_ExportWaitWrlock::" << __func__ << " " << dout_wrapper<CDir*>(ex) << " tid " << tid << " can_wrlock=" << filelock.can_wrlock(-1) << " state=" << state << " sm_t::states[state].can_wrlock=" << (int)filelock.get_sm()->states[state].can_wrlock << dendl;
-#ifdef ADSL_MDS_MIG_DEBUG
+    dout(20) << "C_MDC_ExportWaitWrlock::" << __func__ << " " << dout_wrapper<CDir*>(ex) << " tid " << tid << " can_wrlock=" << filelock.can_wrlock(-1) << " state=" << state << " sm_t::states[state].can_wrlock=" << (int)filelock.get_sm()->states[state].can_wrlock << dendl;
     dout(1) << "C_MDC_ExportWaitWrlock::" << __func__ << " retry export msg: " << *ex << " tid " << tid << " count " << count << " r=" << r << dendl;
 #endif
     if (r >= 0)
       mig->export_frozen(ex, tid, count);
       //mig->export_frozen_with_locks(ex, tid, rdlocks);
+
+    // Always call next finisher: this context is additional in the original process
+    filelock.finish_waiters(SimpleLock::WAIT_STABLE|SimpleLock::WAIT_WR|SimpleLock::WAIT_RD|SimpleLock::WAIT_XLOCK);
   }
 };
 
@@ -1098,6 +1101,8 @@ public:
     if (r >= 0){
       //dout(0) << __func__ <<" resend export msg: " << *ex << " to " << tid << dendl;
       mig->export_dir_nicely(ex, peer);
+      SimpleLock & filelock = ex->get_inode()->filelock;
+      filelock.finish_waiters(SimpleLock::WAIT_STABLE|SimpleLock::WAIT_WR|SimpleLock::WAIT_RD|SimpleLock::WAIT_XLOCK);
     }
   }
 };
@@ -1170,7 +1175,8 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
     if (g_conf->adsl_mds_migmode == 2){
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
       //if (count == 0 || mds->get_nodeid() == 0) {
-      if (diri->authority().first == mds->get_nodeid()) {
+      //if (diri->authority().first == mds->get_nodeid()) {
+      if (count < 3) {
 	diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
 	dout(1) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
@@ -1181,24 +1187,31 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
 #endif
 	return;
       } else {
-	dout(7) << " MDS with rank != 0 couldn't acquire filelock, failing. "
+#ifdef ADSL_MDS_MIG_DEBUG
+	dout(1) << "export_dir couldn't acquire filelock for 3 times, failing. "
 		<< *dir << dendl;
+#else
+	dout(7) << "export_dir couldn't acquire filelock for 3 times, failing. "
+		<< *dir << dendl;
+#endif
       }
     } else if (g_conf->adsl_mds_migmode == 1) {
       diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_Retry_Export(this, dir, it->second.peer));
 #ifdef ADSL_MDS_MIG_DEBUG
       dout(1) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
 	      << *dir << dendl;
-#endif
+#else
       dout(7) << "export_dir couldn't acquire filelock, schedule retry full migration later. "
 	      << *dir << dendl;
+#endif
     } else {
 #ifdef ADSL_MDS_MIG_DEBUG
       dout(1) << "export_dir couldn't acquire filelock, failing. "
 	      << *dir << dendl;
-#endif
+#else
       dout(7) << "export_dir couldn't acquire filelock, failing. "
 	      << *dir << dendl;
+#endif
     }
 
     // .. unwind ..
