@@ -1184,7 +1184,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
 	if (wrflag)	break;
 	next = filelock.get_sm()->states[next].next;
       }
-      if (wrflag) {
+      if (wrflag || filelock.get_state() == LOCK_MIX_SYNC) {
 	if (count < 3) {
 	  diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
@@ -1205,6 +1205,17 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
 #endif
 	}
       } else {
+	//if (count == 0) {
+	//  diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
+#ifdef A//DSL_MDS_MIG_DEBUG
+	//  dout(1) << "export_dir couldn't acquire filelock for state " << filelock.get_state_name(filelock.get_state()) << " for the FIRST time, retry migration later. "
+	//	  << *dir << dendl;
+#else
+	//  dout(7) << "export_dir couldn't acquire filelock for state " << filelock.get_state_name(filelock.get_state()) << " for the FIRST time, retry migration later. "
+	//	  << *dir << dendl;
+#endif
+	//  return;
+	//}
 #ifdef ADSL_MDS_MIG_DEBUG
 	dout(1) << "export_dir couldn't acquire filelock for state " << filelock.get_state_name(filelock.get_state()) << " and later states, failing. "
 		<< *dir << dendl;
