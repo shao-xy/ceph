@@ -1176,22 +1176,40 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
       //if (count == 0 || mds->get_nodeid() == 0) {
       //if (diri->authority().first == mds->get_nodeid()) {
-      if (count < 3) {
-	diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
+      SimpleLock & filelock = diri->filelock;
+      int next = filelock.get_next_state();
+      bool wrflag = false;
+      while (next != LOCK_UNDEF) {
+	wrflag = filelock.get_sm()->states[next].can_wrlock == ANY || (filelock.get_sm()->states[next].can_wrlock == AUTH && diri->is_auth());
+	if (wrflag)	break;
+	next = filelock.get_sm()->states[next].next;
+      }
+      if (wrflag) {
+	if (count < 3) {
+	  diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, count+1));
 #ifdef ADSL_MDS_MIG_DEBUG
-	dout(1) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
-		<< *dir << dendl;
+	  dout(1) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+		  << *dir << dendl;
 #else
-	dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
-		<< *dir << dendl;
+	  dout(7) << "export_dir couldn't acquire filelock, schedule retry migrating frozen subtree later. "
+		  << *dir << dendl;
 #endif
-	return;
+	  return;
+	} else {
+#ifdef ADSL_MDS_MIG_DEBUG
+	  dout(1) << "export_dir couldn't acquire filelock for 3 times, failing. "
+		  << *dir << dendl;
+#else
+	  dout(7) << "export_dir couldn't acquire filelock for 3 times, failing. "
+		  << *dir << dendl;
+#endif
+	}
       } else {
 #ifdef ADSL_MDS_MIG_DEBUG
-	dout(1) << "export_dir couldn't acquire filelock for 3 times, failing. "
+	dout(1) << "export_dir couldn't acquire filelock for state " << filelock.get_state_name(filelock.get_state()) << " and later states, failing. "
 		<< *dir << dendl;
 #else
-	dout(7) << "export_dir couldn't acquire filelock for 3 times, failing. "
+	dout(7) << "export_dir couldn't acquire filelock for state " << filelock.get_state_name(filelock.get_state()) << " and later states, failing. "
 		<< *dir << dendl;
 #endif
       }
