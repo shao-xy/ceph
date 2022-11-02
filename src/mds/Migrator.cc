@@ -1072,6 +1072,9 @@ public:
         }
   void finish(int r) override {
     SimpleLock & filelock = ex->get_inode()->filelock;
+    // Always call next finisher first: this context is additional in the original process
+    filelock.finish_waiters(SimpleLock::WAIT_STABLE|SimpleLock::WAIT_WR|SimpleLock::WAIT_RD|SimpleLock::WAIT_XLOCK);
+
 #ifdef ADSL_MDS_MIG_DEBUG
     ostringstream oss;
     oss << BackTrace(1);
@@ -1083,9 +1086,6 @@ public:
     if (r >= 0)
       mig->export_frozen(ex, tid, count);
       //mig->export_frozen_with_locks(ex, tid, rdlocks);
-
-    // Always call next finisher: this context is additional in the original process
-    filelock.finish_waiters(SimpleLock::WAIT_STABLE|SimpleLock::WAIT_WR|SimpleLock::WAIT_RD|SimpleLock::WAIT_XLOCK);
   }
 };
 
