@@ -1004,10 +1004,10 @@ void CDir::split(int bits, list<CDir*>& subs, list<MDSInternalContextBase*>& wai
     f->pop_pred = pop_pred;
     f->pop_pred.scale(fac);
 
-    dout(0) << __func__ << "  this=" << dout_wrapper<CDir*>(this) << dendl;
-    dout(0) << __func__ << "  pop_pred.dir=" << dout_wrapper<CDir*>(pop_pred.get_dir()) << dendl;
-    dout(0) << __func__ << "  f=" << dout_wrapper<CDir*>(f) << dendl;
-    dout(0) << __func__ << "  f->pop_pred.dir=" << dout_wrapper<CDir*>(f->pop_pred.get_dir()) << dendl;
+    //dout(0) << __func__ << "  this=" << dout_wrapper<CDir*>(this) << dendl;
+    //dout(0) << __func__ << "  pop_pred.dir=" << dout_wrapper<CDir*>(pop_pred.get_dir()) << dendl;
+    //dout(0) << __func__ << "  f=" << dout_wrapper<CDir*>(f) << dendl;
+    //dout(0) << __func__ << "  f->pop_pred.dir=" << dout_wrapper<CDir*>(f->pop_pred.get_dir()) << dendl;
 
     dout(10) << " subfrag " << *p << " " << *f << dendl;
     subfrags[n++] = f;

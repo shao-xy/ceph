@@ -76,7 +76,7 @@
 #include "common/config.h"
 
 #include "adsl/dout_wrapper.h"
-#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
+//#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds_migrator
