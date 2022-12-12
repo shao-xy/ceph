@@ -27,6 +27,8 @@ using std::map;
 #include "common/Cond.h"
 
 #include "adsl/Predictor.h"
+#include "adsl/MDSMonitor.h"
+#include "MDSRank.h"
 
 class MDSRank;
 class Message;
@@ -44,7 +46,8 @@ public:
     messenger(msgr),
     mon_client(monc),
     beat_epoch(0),
-    last_epoch_under(0), my_load(0.0), target_load(0.0)
+    last_epoch_under(0), my_load(0.0), target_load(0.0),
+    iops_tracer(this)
     { }
 
   mds_load_t get_load(utime_t);
@@ -153,6 +156,28 @@ public:
   bool use_pred;
   string pred_code;
   string pred_version;
+  class IOPS_Tracer : public adsl::FactorTracer {
+      MDBalancer * bal;
+    public:
+      IOPS_Tracer(MDBalancer * bal)
+	: adsl::FactorTracer(bal->mds, false, l_mds_request), bal(bal) {}
+      int cur_epoch;
+
+      int get() {
+	if (bal->beat_epoch != cur_epoch && bal->beat_epoch != cur_epoch + 1) {
+	  init_now();
+	  cur_epoch = bal->beat_epoch;
+	  return 0;
+	}
+	bool update = (bal->beat_epoch == cur_epoch + 1);
+	if (update) {
+	  cur_epoch = bal->beat_epoch;
+	}
+	return adsl::FactorTracer::get(update);
+      }
+  } iops_tracer;
+  friend class IOPS_Tracer;
+ 
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
 };

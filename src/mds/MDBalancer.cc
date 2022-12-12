@@ -566,6 +566,8 @@ mds_load_t MDBalancer::get_load(utime_t now)
     dout(20) << "get_load no root, no load" << dendl;
   }
 
+  load.thpt = iops_tracer.get();
+
   load.req_rate = mds->get_req_rate();
   load.queue_len = messenger->get_dispatch_queue_len();
 
@@ -1024,6 +1026,12 @@ void MDBalancer::prep_rebalance(int beat)
     }
     */
 
+    int standard_thpt = -1;
+    map<mds_rank_t, mds_load_t>::iterator m = mds_load.find(whoami);
+    if ((m != mds_load.end()) && (m->second.mds_load(use_pred) > 0)) {
+	standard_thpt = m->second.get_thpt();
+    }
+
     double total_load = 0.0;
     multimap<double,mds_rank_t> load_map;
 
@@ -1041,10 +1049,13 @@ void MDBalancer::prep_rebalance(int beat)
       std::pair < map<mds_rank_t, mds_load_t>::iterator, bool > r(mds_load.insert(val));
       mds_load_t &load(r.first->second);
 
-      dout(15) << " SXY show MDS load rank=" << i << " load=" << load << dendl;
+      //dout(15) << " SXY show MDS load rank=" << i << " load=" << load << dendl;
 
-      //double l = load.mds_load(use_pred) * load_fac;
       double l = load.mds_load(use_pred);
+      if (standard_thpt > 0) {
+	l = l * load.get_thpt() / standard_thpt;
+      }
+      //double l = load.mds_load(use_pred);
       mds_meta_load[i] = l;
 
       if (whoami == 0)

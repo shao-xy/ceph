@@ -654,6 +654,7 @@ void mds_load_t::encode(bufferlist &bl) const {
   ::encode(all, bl);
   ::encode(pred_auth, bl);
   ::encode(pred_all, bl);
+  ::encode(thpt, bl);
   ::encode(req_rate, bl);
   ::encode(cache_hit_rate, bl);
   ::encode(queue_len, bl);
@@ -667,6 +668,7 @@ void mds_load_t::decode(const utime_t &t, bufferlist::iterator &bl) {
   ::decode(all, t, bl);
   ::decode(pred_auth, bl);
   ::decode(pred_all, bl);
+  ::decode(thpt, bl);
   ::decode(req_rate, bl);
   ::decode(cache_hit_rate, bl);
   ::decode(queue_len, bl);

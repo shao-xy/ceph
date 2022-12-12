@@ -38,6 +38,7 @@ class DeltaTracerWatcher {
 
     void init_now() {
       tracer.set_last(check_now(check_arg));
+      last_delta = 0;
     }
 
     T get(bool update = false) {

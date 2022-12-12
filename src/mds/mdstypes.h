@@ -1548,6 +1548,7 @@ struct mds_load_t {
 
   double pred_auth = 0.0;
   double pred_all = 0.0;
+  int thpt = 0;
 
   double req_rate = 0.0;
   double cache_hit_rate = 0.0;
@@ -1565,6 +1566,7 @@ struct mds_load_t {
     // all.set_balancer(bal);
   }
   
+  int get_thpt() { return thpt; }
   double mds_load(bool use_pred);  // defiend in MDBalancer.cc
   void encode(bufferlist& bl) const;
   void decode(const utime_t& now, bufferlist::iterator& bl);
