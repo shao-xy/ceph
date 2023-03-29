@@ -177,6 +177,10 @@ std::vector<Option> get_global_options() {
     .set_description("ADSLab: Reschedule some migrations later if file wrlock failed. Values: 0 no retry, 1 retry full re-export, 2 retry frozen subtree immediately.")
     .set_default(0),
 
+    Option("adsl_mds_nonblockmig", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab: Use non-blocking migration during load re-balancing. Set to 0 (disabled) as default.")
+    .set_default(0),
+
     Option("host", Option::TYPE_STR, Option::LEVEL_BASIC)
     .set_description("local hostname")
     .set_long_description("if blank, ceph assumes the short hostname (hostname -s)")

@@ -43,6 +43,8 @@ class MExportDirNotify;
 class MExportDirNotifyAck;
 class MExportDirFinish;
 
+class MExportDirNonBlock;
+
 class MExportCaps;
 class MExportCapsAck;
 class MGatherCaps;
@@ -62,6 +64,13 @@ public:
   const static int EXPORT_EXPORTING	= 7;  // sent actual export, waiting for ack
   const static int EXPORT_LOGGINGFINISH	= 8;  // logging EExportFinish
   const static int EXPORT_NOTIFYING	= 9;  // waiting for notifyacks
+
+  const static int EXPORT_NONBLOCK_JOURNALING = 10;
+  const static int EXPORT_NONBLOCK_EXPORTING  = 11;
+  const static int EXPORT_NONBLOCK_RECHECKING = 12;
+  const static int EXPORT_NONBLOCK_LOGGINGFINISH = 13;
+  const static int EXPORT_NONBLOCK_NOTIFYING = 14;
+
   static const char *get_export_statename(int s) {
     switch (s) {
     case EXPORT_CANCELLING: return "cancelling";
@@ -350,6 +359,11 @@ public:
 private:
   MDSRank *mds;
   MDCache *cache;
+
+public:
+  void dispatch_export_dir_nonblock(MDRequestRef& mdr, int count);
+  void export_go_synced_nonblock(CDir *dir, uint64_t tid, MExportDirNonBlock * m_ex);
+  void export_nonblock_try_cancel(CDir *dir, bool notify_peer=true);
 };
 
 #endif

@@ -9109,6 +9109,9 @@ void MDCache::dispatch_request(MDRequestRef& mdr)
     case CEPH_MDS_OP_EXPORTDIR:
       migrator->dispatch_export_dir(mdr, 0);
       break;
+    case CEPH_MDS_OP_EXPORTDIR_NONBLOCK:
+      migrator->dispatch_export_dir_nonblock(mdr, 0);
+      break;
     case CEPH_MDS_OP_ENQUEUE_SCRUB:
       enqueue_scrub_work(mdr);
       break;
