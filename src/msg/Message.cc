@@ -154,6 +154,9 @@ using namespace std;
 #include "messages/MExportCapsAck.h"
 #include "messages/MGatherCaps.h"
 
+#include "messages/MExportDirNonBlock.h"
+#include "messages/MExportDirNonBlockAck.h"
+#include "messages/MExportDirNonBlockFinish.h"
 
 #include "messages/MDentryUnlink.h"
 #include "messages/MDentryLink.h"
@@ -689,13 +692,13 @@ Message *decode_message(CephContext *cct, int crcflags,
     break;
 
   case MSG_MDS_EXPORTDIR:
-    m = new MExportDir;
+    m = new MExportDir();
     break;
   case MSG_MDS_EXPORTDIRACK:
-    m = new MExportDirAck;
+    m = new MExportDirAck();
     break;
   case MSG_MDS_EXPORTDIRFINISH:
-    m = new MExportDirFinish;
+    m = new MExportDirFinish();
     break;
 
   case MSG_MDS_EXPORTDIRNOTIFY:
@@ -713,6 +716,13 @@ Message *decode_message(CephContext *cct, int crcflags,
   case MSG_MDS_EXPORTDIRPREPACK:
     m = new MExportDirPrepAck();
     break;
+
+  case MSG_MDS_EXPORTDIR_NONBLOCK:
+    m = new MExportDirNonBlock();
+  case MSG_MDS_EXPORTDIR_NONBLOCK_ACK:
+    m = new MExportDirNonBlockAck();
+  case MSG_MDS_EXPORTDIR_NONBLOCK_FINISH:
+    m = new MExportDirNonBlockFinish();
 
   case MSG_MDS_EXPORTCAPS:
     m = new MExportCaps;

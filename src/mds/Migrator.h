@@ -44,6 +44,8 @@ class MExportDirNotifyAck;
 class MExportDirFinish;
 
 class MExportDirNonBlock;
+class MExportDirNonBlockAck;
+class MExportDirNonBlockFinish;
 
 class MExportCaps;
 class MExportCapsAck;
@@ -82,6 +84,11 @@ public:
     case EXPORT_EXPORTING: return "exporting";
     case EXPORT_LOGGINGFINISH: return "loggingfinish";
     case EXPORT_NOTIFYING: return "notifying";
+    case EXPORT_NONBLOCK_JOURNALING: return "nb_journaling";
+    case EXPORT_NONBLOCK_EXPORTING: return "nb_exporting";
+    case EXPORT_NONBLOCK_RECHECKING: return "nb_rechecking";
+    case EXPORT_NONBLOCK_LOGGINGFINISH: return "nb_loggingfinish";
+    case EXPORT_NONBLOCK_NOTIFYING: return "nb_notifying";
     default: ceph_abort(); return 0;
     }
   }
@@ -95,6 +102,10 @@ public:
   const static int IMPORT_ACKING        = 6; // logged EImportStart, sent ack, waiting for finish
   const static int IMPORT_FINISHING     = 7; // sent cap imports, waiting for finish
   const static int IMPORT_ABORTING      = 8; // notifying bystanders of an abort before unfreezing
+  const static int IMPORT_NONBLOCK_LOGGINGSTART = 9; // got nonblock import, logging EImportStart
+  const static int IMPORT_NONBLOCK_ACKING     = 10; // logged EImportStart, sent ack, waiting for finish
+  const static int IMPORT_NONBLOCK_FINISHING  = 11; // sent cap imports, waiting for finish
+  const static int IMPORT_NONBLOCK_ABORTING   = 12; // notifying bystanders of an abort before unfreezing
   static const char *get_import_statename(int s) {
     switch (s) {
     case IMPORT_DISCOVERING: return "discovering";
@@ -105,6 +116,10 @@ public:
     case IMPORT_ACKING: return "acking";
     case IMPORT_FINISHING: return "finishing";
     case IMPORT_ABORTING: return "aborting";
+    case IMPORT_NONBLOCK_LOGGINGSTART: return "nb_loggingstart";
+    case IMPORT_NONBLOCK_ACKING: return "nb_acking";
+    case IMPORT_NONBLOCK_FINISHING: return "nb_finishing";
+    case IMPORT_NONBLOCK_ABORTING: return "nb_aborting";
     default: ceph_abort(); return 0;
     }
   }
@@ -364,6 +379,18 @@ public:
   void dispatch_export_dir_nonblock(MDRequestRef& mdr, int count);
   void export_go_synced_nonblock(CDir *dir, uint64_t tid, MExportDirNonBlock * m_ex);
   void export_nonblock_try_cancel(CDir *dir, bool notify_peer=true);
+
+  void handle_export_nonblock(MExportDirNonBlock *m);
+  void handle_export_nonblock_ack(MExportDirNonBlockAck *m);
+  void handle_export_nonblock_finish(MExportDirNonBlockFinish *m);
+  void export_nonblock_logged_finish(CDir *dir);
+
+  void import_nonblock_logged_start(dirfrag_t df, CDir *dir, mds_rank_t from,
+				    map<client_t,entity_inst_t> &imported_client_map,
+				    map<client_t,uint64_t>& sseqmap);
+  void import_finish_nonblock(CDir *dir, bool notify, bool last);
+
+  void export_empty_import_nonblock(CDir *dir);
 };
 
 #endif

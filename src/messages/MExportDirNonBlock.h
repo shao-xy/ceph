@@ -13,6 +13,7 @@ class MExportDirNonBlock : public Message {
   dirfrag_t dirfrag;
   filepath path;
 
+public:
   bool started;
 
   // MExportDirPrep
