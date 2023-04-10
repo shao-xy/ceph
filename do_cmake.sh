@@ -4,7 +4,7 @@ if test -e build; then
     #echo 'build dir already exists; rm -rf build and re-run'
     read -p 'build dir already exists; rm -rf build and re-run, or override, or abort? (y/o/N)' c
 	if [ x${c}x == xyx ] || [ x${c}x == xYx ]; then
-		rm -rf build
+		sudo rm -rf build
 	elif [ x${c}x == xox ] || [ x${c}x == xOx ]; then
 		:
 	else
