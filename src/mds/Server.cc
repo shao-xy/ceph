@@ -1197,6 +1197,7 @@ void Server::respond_to_request(MDRequestRef& mdr, int r)
 {
   if (mdr->client_request) {
     reply_client_request(mdr, new MClientReply(mdr->client_request, r));
+    mds->adslmon->record_client_request(mdr->client_request, ceph_clock_now());
 
     // add here to avoid counting ops multiple times (e.g., locks, loading)
     switch(mdr->client_request->get_op()) {

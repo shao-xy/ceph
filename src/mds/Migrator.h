@@ -26,6 +26,7 @@ using std::map;
 using std::list;
 using std::set;
 
+#include "common/Clock.h"
 
 class MDSRank;
 class CDir;
@@ -121,8 +122,9 @@ protected:
     utime_t last_cum_auth_pins_change;
     int last_cum_auth_pins;
     int num_remote_waiters; // number of remote authpin waiters
+    utime_t start_stamp;
     export_state_t() : state(0), peer(0), tid(0), mut(),
-		       last_cum_auth_pins(0), num_remote_waiters(0) {}
+		       last_cum_auth_pins(0), num_remote_waiters(0), start_stamp(ceph_clock_now()) {}
   };
 
   map<CDir*, export_state_t>  export_state;
@@ -140,7 +142,8 @@ protected:
     map<client_t,entity_inst_t> client_map;
     map<CInode*, map<client_t,Capability::Export> > peer_exports;
     MutationRef mut;
-    import_state_t() : state(0), peer(0), tid(0), mut() {}
+    utime_t start_stamp;
+    import_state_t() : state(0), peer(0), tid(0), mut(), start_stamp(ceph_clock_now()) {}
   };
 
   map<dirfrag_t, import_state_t>  import_state;
