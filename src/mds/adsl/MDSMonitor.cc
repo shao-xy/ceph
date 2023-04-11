@@ -10,6 +10,8 @@
 #include "mds/Server.h"
 #include "mds/MDBalancer.h"
 
+#include "adsl/dout_wrapper.h"
+
 #include "common/Thread.h"
 class TestThread : public Thread {
   Mutex mut;
@@ -113,6 +115,24 @@ void MDSMonitor::update_and_writelog()
     ss << " #DIRFRAG 0";
   }
   dout(g_conf->adsl_mds_mon_debug_level) << ss.str() << dendl;
+}
+
+void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool is_export)
+{
+  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
+    << " ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION " 
+    << (is_export ? 'E' : 'I') << ' '
+    << std::fixed <<  double(start) << ' ' << double(end - start) << ' '
+    << dout_wrapper<CDir*>(dir) << dendl;
+}
+
+void MDSMonitor::record_client_request(MClientRequest * creq, utime_t end)
+{
+  utime_t start = creq->get_dispatch_stamp();
+  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
+    << " ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION " 
+    << std::fixed << double(start) << ' ' << double(end - start) << ' '
+    << *creq << dendl;
 }
 
 }; /* namespace: adsl */

@@ -8,6 +8,8 @@
 
 #include "mds/mdstypes.h"
 
+#include "messages/MClientRequest.h"
+
 #include "DeltaTracer.h"
 
 class MDSRank;
@@ -44,6 +46,9 @@ class MDSMonitor : public Thread {
     ~MDSMonitor();
   
     int terminate();
+
+    void record_migration(CDir * dir, utime_t start, utime_t end, bool is_export=true);
+    void record_client_request(MClientRequest * creq, utime_t end);
 };
 
 }; /* namespace: adsl */
