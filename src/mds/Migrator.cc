@@ -2308,6 +2308,8 @@ void Migrator::export_finish(CDir *dir)
     mds->queue_waiters(finished);
 
   MutationRef mut = it->second.mut;
+  mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now());
+  
   // remove from exporting list, clean up state
   export_state.erase(it);
   dir->state_clear(CDir::STATE_EXPORTING);
@@ -3176,6 +3178,8 @@ void Migrator::import_finish(CDir *dir, bool notify, bool last)
 
   map<CInode*, map<client_t,Capability::Export> > peer_exports;
   it->second.peer_exports.swap(peer_exports);
+
+  mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now(), false);
 
   // clear import state (we're done!)
   MutationRef mut = it->second.mut;
