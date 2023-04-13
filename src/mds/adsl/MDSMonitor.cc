@@ -32,7 +32,7 @@ FactorTracer::FactorTracer(MDSRank * mds, bool use_server, int factoridx)
   : DeltaTracerWatcher<int, int>(factoridx), mds(mds), use_server(use_server)
 {
   init_now();
-} 
+}
 
 int FactorTracer::check_now(int idx) {
   if (use_server)
@@ -117,11 +117,11 @@ void MDSMonitor::update_and_writelog()
   dout(g_conf->adsl_mds_mon_debug_level) << ss.str() << dendl;
 }
 
-void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool is_export)
+void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool is_export, bool is_cancelled)
 {
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
-    << " ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION " 
-    << (is_export ? 'E' : 'I') << ' '
+    << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION "
+    << (is_export ? "E " : "I ") << (is_cancelled ? "C " : "S ")
     << std::fixed <<  double(start) << ' ' << double(end - start) << ' '
     << dout_wrapper<CDir*>(dir) << dendl;
 }
@@ -130,7 +130,7 @@ void MDSMonitor::record_client_request(MClientRequest * creq, utime_t end)
 {
   utime_t start = creq->get_dispatch_stamp();
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
-    << " ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION " 
+    << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION C "
     << std::fixed << double(start) << ' ' << double(end - start) << ' '
     << *creq << dendl;
 }

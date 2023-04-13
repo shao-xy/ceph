@@ -365,6 +365,7 @@ void Migrator::export_try_cancel(CDir *dir, bool notify_peer)
     mut.swap(it->second.mut);
 
     if (it->second.state == EXPORT_CANCELLED) {
+      mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now(), true);
       export_state.erase(it);
       dir->state_clear(CDir::STATE_EXPORTING);
       // send pending import_maps?
@@ -468,6 +469,7 @@ void Migrator::handle_mds_failure_or_stop(mds_rank_t who)
 	    export_finish(dir);
 	} else if (p->second.state == EXPORT_CANCELLING) {
 	  if (p->second.notify_ack_waiting.empty()) {
+	    mds->adslmon->record_migration(dir, p->second.start_stamp, ceph_clock_now(), true);
 	    export_state.erase(p);
 	    export_cancel_finish(dir);
 	  }
@@ -1161,6 +1163,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
     cache->try_subtree_merge(dir);
 
     mds->send_message_mds(new MExportDirCancel(dir->dirfrag(), it->second.tid), it->second.peer);
+    mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now(), true);
     export_state.erase(it);
 
     dir->state_clear(CDir::STATE_EXPORTING);
@@ -1248,6 +1251,7 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
     cache->try_subtree_merge(dir);
 
     mds->send_message_mds(new MExportDirCancel(dir->dirfrag(), it->second.tid), it->second.peer);
+    mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now(), true);
     export_state.erase(it);
 
     dir->state_clear(CDir::STATE_EXPORTING);
@@ -2207,6 +2211,7 @@ void Migrator::handle_export_notify_ack(MExportDirNotifyAck *m)
       dout(7) << "handle_export_notify_ack from " << m->get_source()
 	      << ": cancelling export, processing notify on " << *dir << dendl;
       if (stat.notify_ack_waiting.empty()) {
+	mds->adslmon->record_migration(dir, export_state_entry->second.start_stamp, ceph_clock_now(), true);
 	export_state.erase(export_state_entry);
 	export_cancel_finish(dir);
       }
@@ -2309,7 +2314,7 @@ void Migrator::export_finish(CDir *dir)
 
   MutationRef mut = it->second.mut;
   mds->adslmon->record_migration(dir, it->second.start_stamp, ceph_clock_now());
-  
+
   // remove from exporting list, clean up state
   export_state.erase(it);
   dir->state_clear(CDir::STATE_EXPORTING);
