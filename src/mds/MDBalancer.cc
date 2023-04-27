@@ -688,6 +688,7 @@ void MDBalancer::send_heartbeat()
 
   if (mds->get_nodeid() == 0) {
     beat_epoch++;
+    mds->adslmon->record_switch_epoch(beat_epoch, ceph_clock_now());
    
     mds_load.clear();
   }
