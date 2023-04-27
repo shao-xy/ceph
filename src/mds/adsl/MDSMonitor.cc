@@ -117,6 +117,14 @@ void MDSMonitor::update_and_writelog()
   dout(g_conf->adsl_mds_mon_debug_level) << ss.str() << dendl;
 }
 
+void MDSMonitor::record_switch_epoch(int beat_epoch, utime_t now)
+{
+  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
+    << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION S"
+    << std::fixed << double(now)
+    << dendl;
+}
+
 void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool is_export, bool is_cancelled)
 {
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
