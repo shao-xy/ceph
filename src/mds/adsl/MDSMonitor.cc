@@ -113,6 +113,15 @@ void MDSMonitor::update_and_writelog()
     ss << " #DIRFRAG 0";
   }
   dout(g_conf->adsl_mds_mon_debug_level) << ss.str() << dendl;
+
+  if (g_conf->adsl_mds_predictor_trace_predict_lat) {
+    std::stringstream ss_d;
+    for (double d : mds->balancer->predictor_lat_tracer) {
+      ss_d << ' ' << d;
+    }
+    mds->balancer->predictor_lat_tracer.clear();
+    dout(0) << " TRACE_PREDICT_LAT" << ss_d.str() << dendl;
+  }
 }
 
 }; /* namespace: adsl */

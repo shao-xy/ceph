@@ -417,8 +417,19 @@ int dirfrag_load_pred_t::do_predict(Predictor * predictor)
   dout(20) << __func__ << "  mark #3 " << *this << dendl;
 
   LoadArray_Double predicted;
+
+  utime_t start, end;
+  if (g_conf->adsl_mds_predictor_trace_predict_lat) {
+    start = ceph_clock_now();
+  }
+
   if (predictor->predict(pred_name, pred_code, load_prepare(), predicted) < 0) {
     return -1;
+  }
+
+  if (g_conf->adsl_mds_predictor_trace_predict_lat) {
+    end = ceph_clock_now();
+    bal->predictor_lat_tracer.push_back((double)(end - start));
   }
 
   dout(20) << __func__ << "  mark #4 " << *this << dendl;

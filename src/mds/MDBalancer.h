@@ -180,6 +180,8 @@ public:
  
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
+
+  vector<double> predictor_lat_tracer;
 };
 
 #endif
