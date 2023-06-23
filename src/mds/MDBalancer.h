@@ -182,6 +182,7 @@ public:
   friend class adsl::dirfrag_load_pred_t;
 
   vector<double> predictor_lat_tracer;
+  int get_beat_epoch() { return beat_epoch; }
 };
 
 #endif
