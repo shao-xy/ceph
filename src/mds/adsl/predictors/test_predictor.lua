@@ -20,11 +20,13 @@ load_matrix = {
 }
 --]=]
 
+---[=[
 load_matrix = {
 	{181,192,245,188,46,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,37556,28511},
 	{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 }
+--]=]
 
 
 DEBUG = true
@@ -34,5 +36,6 @@ function PRED_LOG (lvl, ...)
 end
 --predicted = require("waterfall")
 --predicted = require("lunule")
-predicted = require("spatial-even")
+--predicted = require("spatial-even")
+predicted = require("ceph")
 print(table.concat(predicted, ","))
