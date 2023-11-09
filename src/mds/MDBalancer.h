@@ -180,6 +180,8 @@ public:
  
   adsl::Predictor predictor;
   friend class adsl::dirfrag_load_pred_t;
+
+  bool check_if_trigger_migration();
 };
 
 #endif

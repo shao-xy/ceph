@@ -821,7 +821,9 @@ void MDBalancer::handle_heartbeat(MHeartbeat *m)
                           << "balancer=" << mds->mdsmap->get_balancer()
                           << " : " << cpp_strerror(r);
       }
-      prep_rebalance(m->get_beat());
+      if (!g_conf->adsl_mds_bal_ifenable || check_if_trigger_migration()) {
+	prep_rebalance(m->get_beat());
+      }
     }
   }
 
@@ -1688,4 +1690,36 @@ void MDBalancer::handle_mds_failure(mds_rank_t who)
   if (0 == who) {
     last_epoch_under = 0;
   }
+}
+
+bool MDBalancer::check_if_trigger_migration()
+{
+  // collect thpts and calculate average
+  vector<int> thpts;
+  int sum = 0;
+  int thpt = 0;
+  int max = 0;
+  for (auto it = mds_load.begin(); it != mds_load.end(); it++) {
+    thpt = it->second.get_thpt();
+    thpt = thpt > 0 ? thpt : 1;
+    sum += thpt;
+    thpts.push_back(thpt);
+    if (thpt > max) {
+      max = thpt;
+    }
+  }
+  int len = thpts.size();
+  double avg = sum / len;
+
+  // calculate IF value
+  double dsum = 0;
+  for (auto it = thpts.begin(); it != thpts.end(); it++) {
+    thpt = *it;
+    dsum += (thpt - avg) * (thpt - avg);
+  }
+  double stdev_thpt = sqrt(dsum / (len - 1));
+  double urgency = 1/(1+pow(exp(1), 5-10*(max/g_conf->adsl_mds_bal_presetmax)));
+  double if_val = stdev_thpt * urgency / (sqrt(len) * avg);
+
+  return if_val >= g_conf->adsl_mds_bal_ifthreshold;
 }
