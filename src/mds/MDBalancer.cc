@@ -1088,7 +1088,7 @@ void MDBalancer::prep_rebalance(int beat)
     }
 
     // am i over long enough?
-    if (last_epoch_under && beat_epoch - last_epoch_under < 2) {
+    if (!g_conf->adsl_mds_disable_2_epoch_check && last_epoch_under && beat_epoch - last_epoch_under < 2) {
       dout(5) << "  i am overloaded, but only for " << (beat_epoch - last_epoch_under) << " epochs" << dendl;
       return;
     }
@@ -1279,7 +1279,7 @@ void MDBalancer::try_rebalance(balance_state_t& state)
     double amount = it.second;
 
     if (amount < MIN_OFFLOAD) continue;
-    if (amount / target_load < .2) continue;
+    // if (amount / target_load < .2) continue;
 
     dout(5) << "want to send " << amount << " to mds." << target
       //<< " .. " << (*it).second << " * " << load_fac

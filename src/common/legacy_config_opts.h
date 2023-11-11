@@ -22,6 +22,7 @@ OPTION(adsl_mds_migmode, OPT_INT)
 OPTION(adsl_mds_bal_presetmax, OPT_INT)
 OPTION(adsl_mds_bal_ifthreshold, OPT_FLOAT)
 OPTION(adsl_mds_bal_ifenable, OPT_INT)
+OPTION(adsl_mds_disable_2_epoch_check, OPT_INT)
 OPTION(host, OPT_STR) // "" means that ceph will use short hostname
 OPTION(public_addr, OPT_ADDR)
 OPTION(public_bind_addr, OPT_ADDR)

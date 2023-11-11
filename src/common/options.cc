@@ -189,6 +189,10 @@ std::vector<Option> get_global_options() {
     .set_default(0)
     .set_description(""),
 
+    Option("adsl_mds_disable_2_epoch_check", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(0)
+    .set_description("ADSLab: Disable 2 epoch check of load balance"),
+
     Option("host", Option::TYPE_STR, Option::LEVEL_BASIC)
     .set_description("local hostname")
     .set_long_description("if blank, ceph assumes the short hostname (hostname -s)")
