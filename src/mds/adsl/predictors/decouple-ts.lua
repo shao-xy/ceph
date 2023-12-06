@@ -117,7 +117,11 @@ function decouple_temporal_spatial_predict()
 		predictions[#predictions+1] = temporal_predicted[i] + spatial_predicted[i]
 	end
 	total = temporal_predicted_sum + spatial_predicted_sum
-	PRED_LOG(0, " TEMPORAL_SPATIAL_RATIO " .. (temporal_predicted_sum / total) .. " " .. (spatial_predicted_sum / total))
+	if total == 0 then
+		PRED_LOG(0, " TEMPORAL_SPATIAL_RATIO " .. temporal_predicted_sum .. " " .. spatial_predicted_sum .. " 0 0")
+	else
+		PRED_LOG(0, " TEMPORAL_SPATIAL_RATIO " .. temporal_predicted_sum .. " " .. spatial_predicted_sum .. " " .. (temporal_predicted_sum / total) .. " " .. (spatial_predicted_sum / total))
+	end
 	return predictions
 end
 
