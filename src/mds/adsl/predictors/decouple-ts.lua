@@ -38,25 +38,34 @@ function temporal_predict(input_matrix)
 	return prediction
 end
 
-function spatial_predict(input_matrix)
+function spatial_predict(input_matrix, mode)
+	mode = mode or 1
 	local sum_vector = {}
 	if #input_matrix == 0 then
 		return sum_vector
 	end
-	for i = 1, #input_matrix[1] do
+	if mode == 1 then
+		for i = 1, #input_matrix[1] do
+			local sum = 0
+			for entry, entry_load_list in ipairs(input_matrix) do
+				sum = sum + entry_load_list[i]
+			end
+			sum_vector[i] = sum
+		end
+		--[=[
+		if DEBUG then
+			PRED_LOG(0, table.concat(sum_vector, ","))
+		end
+		--]=]
+		local col_size = #input_matrix
+		avg = temporal_predict_vector(sum_vector) / col_size
+	else
 		local sum = 0
 		for entry, entry_load_list in ipairs(input_matrix) do
-			sum = sum + entry_load_list[i]
+			sum = sum + entry_load_list[#entry_load_list]
 		end
-		sum_vector[i] = sum
+		avg = sum / #input_matrix
 	end
-	--[=[
-	if DEBUG then
-		PRED_LOG(0, table.concat(sum_vector, ","))
-	end
-	--]=]
-	local col_size = #input_matrix[1]
-	local avg = temporal_predict_vector(sum_vector) / col_size
 	prediction = {}
 	for i = 1, #input_matrix do
 		prediction[i] = avg
@@ -105,9 +114,31 @@ function decouple_temporal_spatial_predict()
 	local temporal_predicted = temporal_predict(temporal_matrix)
 	local spatial_predicted = spatial_predict(spatial_matrix)
 	if DEBUG then
+		dump_matrix = function(matrix, name)
+			if name then
+				print("Dumping matrix " .. name)
+			end
+			if type(matrix) ~= "table" then
+				print(matrix)
+			elseif type(matrix[1]) ~= "table" then
+				print(table.concat(matrix, ","))
+			else
+				for entry, entry_load_list in ipairs(matrix) do
+					print(table.concat(entry_load_list, ","))
+				end
+			end
+		end
+		dump_matrix(temporal_matrix, "temporal_matrix")
+		dump_matrix(spatial_matrix, "spatial_matrix")
+		dump_matrix(temporal_predicted, "temporal_predicted")
+		dump_matrix(spatial_predicted, "spatial_predicted")
+	end
+	--[==[
+	if DEBUG then
 		PRED_LOG(0, table.concat(temporal_predicted, ","))
 		PRED_LOG(0, table.concat(spatial_predicted, ","))
 	end
+	--]==]
 	local predictions = {}
 	local temporal_predicted_sum = 0
 	local spatial_predicted_sum = 0
