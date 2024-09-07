@@ -107,6 +107,7 @@ public:
   CDir * dir;
   MDBalancer * bal;
   map<int, CInode*> pos_map;
+  map<CInode*, int> r_pos_map;
 
   // this functions is defined in MDBalancer.cc
   PredInputLoad load_prepare();

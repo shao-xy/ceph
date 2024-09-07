@@ -276,7 +276,8 @@ PredInputLoad dirfrag_load_pred_t::load_prepare()
     CDentry::linkage_t * linkage = it->second->get_linkage();
     if (linkage && linkage->is_primary()) {
       CInode * child = linkage->get_inode();
-      pos_map[idx++] = child;
+      pos_map[idx] = child;
+      r_pos_map[child] = idx++;
       LoadArray_Int cur_load = child->get_loadarray(bal->beat_epoch);
       load_matrix.push_back(cur_load);
 

@@ -238,7 +238,7 @@ void CMiner::from_series_to_table(){
 }
 
 void *CMiner::entry() {
-	dout(0) << "Thread created." << dendl;
+	dout(7) << "Thread created." << dendl;
 
 	while (1) {
 		//mine_lock.Lock();
@@ -246,26 +246,26 @@ void *CMiner::entry() {
 		sleep(9);
 
 		if (balancer->get_beat_epoch() - last_epoch >= 6 * 3) {
-			dout(0) << "CMiner start processing." << dendl;
+			dout(7) << "CMiner start processing." << dendl;
 			last_epoch = balancer->get_beat_epoch();
 			process();
-			dout(0) << "CMiner finish processing." << dendl;
+			dout(7) << "CMiner finish processing." << dendl;
 
 			// debug info
 			int curr_index = 0;
 			for (auto &map_item : correlation_series) {
-				dout(0) << "current index: " << ++curr_index << dendl;
+				// dout(0) << "current index: " << ++curr_index << dendl;
 				for (auto &inode : map_item) {
 					auto& curr_inode = inode.first;
 					auto& miner_series = inode.second;
 
-					dout(0) << "inode number: " << curr_inode << dendl;
+					dout(7) << "inode number: " << curr_inode << dendl;
 
 					for (auto &relation_pair : miner_series) {
 						auto &related_inode = relation_pair.first;
 						auto &data = relation_pair.second;
 
-						dout(0) << "    related inode number: " << related_inode << " (" << data.first << ", " << data.second << ")" << dendl;
+						dout(7) << "    related inode number: " << related_inode << " (" << data.first << ", " << data.second << ")" << dendl;
 					}
 				}
 			}

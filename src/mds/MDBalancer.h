@@ -89,6 +89,10 @@ public:
     return beat_epoch;
   }
 
+  MDSRank* get_mds() {
+    return mds;
+  }
+
 private:
   typedef struct {
     std::map<mds_rank_t, double> targets;

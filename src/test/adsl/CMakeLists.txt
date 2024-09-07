@@ -2,7 +2,7 @@ add_executable(adsl_test_mds_predictor mds/test_predictor.cc)
 target_link_libraries(adsl_test_mds_predictor mds global)
 
 #set(ENV{Torch_DIR} "/home/ceph/LSTM/libtorch")
-#find_package(Torch REQUIRED)
+#find_package(Torch REQUIRED)   
 #message(STATUS "PyTorch lib found: ${TORCH_LIBRARIES}")
 add_executable(adsl_test_mds_pytorch_simple mds/pytorch/test_simple.cc)
 target_link_libraries(adsl_test_mds_pytorch_simple "${TORCH_LIBRARIES}")

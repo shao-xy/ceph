@@ -1585,7 +1585,10 @@ void Server::set_trace_dist(Session *session, MClientReply *reply,
  */
 void Server::handle_client_request(MClientRequest *req)
 {
-  dout(4) << "handle_client_request " << *req << dendl;
+  // dout(4) << "handle_client_request " << *req << dendl;
+
+  /* request-hit-log */
+  // dout(0) << "handle_client_request " << dendl;
 
   //mds->balancer->miner->hit(rand()%10000);
 
@@ -3003,6 +3006,9 @@ void Server::handle_client_getattr(MDRequestRef& mdr, bool is_lookup)
   // mds->balancer->miner->hit(req->get_filepath().get_ino());
   // dout(0) << "request-hit-log handle_client_getattr req.path: " << req->get_filepath() << " " << req->get_filepath().get_ino() << dendl;
   
+  /* request-hit-log */
+  dout(10) << " request-hit-log handle_client_getattr " << dendl;
+
   if (req->get_filepath().depth() == 0 && is_lookup) {
     // refpath can't be empty for lookup but it can for
     // getattr (we do getattr with empty refpath for mount of '/')
@@ -3065,12 +3071,19 @@ void Server::handle_client_getattr(MDRequestRef& mdr, bool is_lookup)
   // value for them.  (currently this matters for xattrs and inline data)
   mdr->getattr_caps = mask;
 
+  /* request-hit-log */
+  dout(10) << " request-hit-log handle_client_getattr " << mask << dendl;
+
   mds->balancer->hit_inode(ceph_clock_now(), ref, META_POP_IRD,
 			   req->get_source().num());
 
   // reply
   dout(10) << "reply to stat on " << *req << dendl;
   mdr->tracei = ref;
+
+  /* request-hit-log */
+  dout(10) << " request-hit-log handle_client_getattr " << ref << dendl;
+
   if (is_lookup)
     mdr->tracedn = mdr->dn[0].back();
   respond_to_request(mdr, 0);
@@ -4073,6 +4086,8 @@ void Server::handle_client_setattr(MDRequestRef& mdr)
   mds->balancer->miner->hit(req->get_filepath().get_ino());
   //dout(0) << "request-hit-log handle_client_setattr : " << req->get_filepath().get_ino() << dendl;
   
+  /* request-hit-log */
+  dout(0) << " request-hit-log handle_client_setattr " << dendl;
 
   CInode *cur = rdlock_path_pin_ref(mdr, 0, rdlocks, true);
   if (!cur) return;
@@ -4865,6 +4880,9 @@ void Server::handle_client_setxattr(MDRequestRef& mdr)
   mds->balancer->miner->hit(req->get_filepath().get_ino());
   //dout(0) << "request-hit-log handle_client_setxattr : " << req->get_filepath().get_ino() << dendl;
 
+  /* request-hit-log */
+  dout(0) << " request-hit-log handle_client_setxattr " << dendl;
+
 
   CInode *cur;
 
@@ -4900,6 +4918,9 @@ void Server::handle_client_setxattr(MDRequestRef& mdr)
   size_t len = req->get_data().length();
   size_t inc = len + name.length();
 
+  /* request-hit-log */
+    dout(0) << " request-hit-log handle_client_setxattr " << rqe->get_data() << dendl;
+
   // check xattrs kv pairs size
   size_t cur_xattrs_size = 0;
   for (const auto& p : *pxattrs) {
@@ -4907,6 +4928,8 @@ void Server::handle_client_setxattr(MDRequestRef& mdr)
       continue;
     }
     cur_xattrs_size += p.first.length() + p.second.length();
+    /* request-hit-log */
+    dout(0) << " request-hit-log handle_client_setxattr " << p.first << " " << p.second << dendl;
   }
 
   if (((cur_xattrs_size + inc) > g_conf->mds_max_xattr_pairs_size)) {
