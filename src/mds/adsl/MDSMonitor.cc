@@ -131,7 +131,8 @@ void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool i
     << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION "
     << (is_export ? "E " : "I ") << (is_cancelled ? "C " : "S ")
     << std::fixed <<  double(start) << ' ' << double(end - start) << ' '
-    << dout_wrapper<CDir*>(dir) << dendl;
+    //<< dout_wrapper<CDir*>(dir) << dendl;
+    << dir->dirfrag() << ' ' << dir->get_path() << dendl;
 }
 
 void MDSMonitor::record_client_request(MClientRequest * creq, utime_t end)
@@ -140,7 +141,9 @@ void MDSMonitor::record_client_request(MClientRequest * creq, utime_t end)
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
     << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION C "
     << std::fixed << double(start) << ' ' << double(end - start) << ' '
-    << *creq << dendl;
+    //<< *creq << dendl;
+    << creq->get_tid() << ' ' << ceph_mds_op_name(creq->get_op())
+    << creq->get_filepath() << dendl;
 }
 
 }; /* namespace: adsl */
