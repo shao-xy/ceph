@@ -13,6 +13,8 @@
 #include "DeltaTracer.h"
 
 class MDSRank;
+class MDRequestImpl;
+typedef boost::intrusive_ptr<MDRequestImpl> MDRequestRef;
 
 namespace adsl {
 
@@ -49,7 +51,7 @@ class MDSMonitor : public Thread {
 
     void record_switch_epoch(int beat_epoch, utime_t now);
     void record_migration(CDir * dir, utime_t start, utime_t end, bool is_export=true, bool is_cancelled=false);
-    void record_client_request(MClientRequest * creq, utime_t end);
+    void record_client_request(MDRequestRef & mdr, utime_t end);
 };
 
 }; /* namespace: adsl */
