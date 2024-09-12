@@ -35,4 +35,4 @@ if test ! -d build; then
 	execute_or_exit ./do_cmake.sh
 fi
 cd build
-execute_or_exit make -j32
+execute_or_exit make -j32 ceph-mds
