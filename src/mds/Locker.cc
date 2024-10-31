@@ -45,7 +45,7 @@
 
 #include "common/config.h"
 
-//#define ADSL_MDS_LOCKER_DEBUG
+#define ADSL_MDS_LOCKER_DEBUG
 
 #define dout_subsys ceph_subsys_mds_locker
 #undef dout_prefix
