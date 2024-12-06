@@ -125,6 +125,7 @@ void MDSMonitor::record_switch_epoch(int beat_epoch, utime_t now)
     << dendl;
 }
 
+/*
 void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool is_export, bool is_cancelled)
 {
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
@@ -132,6 +133,42 @@ void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool i
     << (is_export ? "E " : "I ") << (is_cancelled ? "C " : "S ")
     << std::fixed << double(start) << ' ' << double(end - start) << ' '
     //<< dout_wrapper<CDir*>(dir) << dendl;
+    << dir->dirfrag() << ' ' << dir->get_path() << dendl;
+}
+*/
+
+void MDSMonitor::record_export(CDir * dir, export_timestamp_trace &export_trace, utime_t finalize)
+{
+  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
+    << "ADSL_DEBUG_MIGRATION E " << export_trace.final_state
+    << std::fixed
+    << double(export_trace.lock_start) << ' '
+    << double(export_trace.discover_start) << ' '
+    << double(export_trace.freeze_start) << ' '
+    << double(export_trace.prep_start) << ' '
+    << double(export_trace.warn_start) << ' '
+    << double(export_trace.export_start) << ' '
+    << double(export_trace.loggingfinish_start) << ' '
+    << double(export_trace.notify_start) << ' '
+    << finalize << ' '
+    << dir->dirfrag() << ' ' << dir->get_path() << dendl;
+}
+
+void MDSMonitor::record_import(CDir * dir, import_timestamp_trace &import_trace, utime_t finalize)
+{
+  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
+    << "ADSL_DEBUG_MIGRATION I " << import_trace.final_state
+    << std::fixed
+    << double(import_trace.discovering_start) << ' '
+    << double(import_trace.discovered_start) << ' '
+    << double(import_trace.prepping_start) << ' '
+    << double(import_trace.prepped_start) << ' '
+    << double(import_trace.loggingstart_start) << ' '
+    << double(import_trace.ack_start) << ' '
+    << double(import_trace.finish_start) << ' '
+    << double(import_trace.loggingfinish_start) << ' '
+    << double(import_trace.notify_start) << ' '
+    << finalize << ' '
     << dir->dirfrag() << ' ' << dir->get_path() << dendl;
 }
 

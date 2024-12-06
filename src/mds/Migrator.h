@@ -122,9 +122,9 @@ protected:
     utime_t last_cum_auth_pins_change;
     int last_cum_auth_pins;
     int num_remote_waiters; // number of remote authpin waiters
-    utime_t start_stamp;
+    struct export_timestamp_trace export_trace;
     export_state_t() : state(0), peer(0), tid(0), mut(),
-		       last_cum_auth_pins(0), num_remote_waiters(0), start_stamp(ceph_clock_now()) {}
+		       last_cum_auth_pins(0), num_remote_waiters(0) {}
   };
 
   map<CDir*, export_state_t>  export_state;
@@ -142,8 +142,8 @@ protected:
     map<client_t,entity_inst_t> client_map;
     map<CInode*, map<client_t,Capability::Export> > peer_exports;
     MutationRef mut;
-    utime_t start_stamp;
-    import_state_t() : state(0), peer(0), tid(0), mut(), start_stamp(ceph_clock_now()) {}
+    import_timestamp_trace import_trace;
+    import_state_t() : state(0), peer(0), tid(0), mut() {}
   };
 
   map<dirfrag_t, import_state_t>  import_state;

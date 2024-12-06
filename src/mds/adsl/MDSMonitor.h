@@ -50,7 +50,8 @@ class MDSMonitor : public Thread {
     int terminate();
 
     void record_switch_epoch(int beat_epoch, utime_t now);
-    void record_migration(CDir * dir, utime_t start, utime_t end, bool is_export=true, bool is_cancelled=false);
+    void record_export(CDir * dir, export_timestamp_trace &export_trace, utime_t finalize = ceph_clock_now());
+    void record_import(CDir * dir, import_timestamp_trace &import_trace, utime_t finalize = ceph_clock_now());
     void record_client_request(MDRequestRef & mdr, utime_t end);
 };
 

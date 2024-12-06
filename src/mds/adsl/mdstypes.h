@@ -268,4 +268,30 @@ inline void decode(adsl::dirfrag_load_t &c, bufferlist::iterator &p) {
   c.decode(sample, p);
 }
 
+struct export_timestamp_trace {
+  utime_t lock_start;
+  utime_t discover_start;
+  utime_t freeze_start;
+  utime_t prep_start;
+  utime_t warn_start;
+  utime_t export_start;
+  utime_t loggingfinish_start;
+  utime_t notify_start;
+  // in most cases final_state = export_state.state
+  // only EXCEPT when the migration is cancelled
+  int final_state;
+};
+struct import_timestamp_trace {
+  utime_t discovering_start;
+  utime_t discovered_start;
+  utime_t prepping_start;
+  utime_t prepped_start;
+  utime_t loggingstart_start;
+  utime_t ack_start;
+  utime_t finish_start;
+  utime_t loggingfinish_start;
+  utime_t notify_start;
+  int final_state;
+};
+
 #endif /* mds/adsl/mdstypes.h */
