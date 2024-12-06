@@ -31,6 +31,9 @@ class ScatterLock : public SimpleLock {
 
   mutable std::unique_ptr<more_bits_t> _more;
 
+#ifdef ADSL_MDS_LOCKER_DEBUG
+public:
+#endif
   more_bits_t *more() {
     if (!_more)
       _more.reset(new more_bits_t(this));
