@@ -202,6 +202,9 @@ private:
 
   mutable std::unique_ptr<unstable_bits_t> _unstable;
 
+#ifdef ADSL_MDS_LOCKER_DEBUG
+public:
+#endif
   bool have_more() const { return _unstable ? true : false; }
   unstable_bits_t *more() const {
     if (!_unstable)
