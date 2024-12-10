@@ -174,15 +174,17 @@ void MDSMonitor::record_import(CDir * dir, import_timestamp_trace &import_trace,
 
 void MDSMonitor::record_client_request(MDRequestRef & mdr, utime_t end)
 {
-  MClientRequest * creq = mdr->client_request;
-  utime_t start = creq->get_dispatch_stamp();
-  dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
-    << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION C "
-    << std::fixed << double(start) << ' ' << double(end - start) << ' '
-    << mdr->retry << ' '
-    //<< *creq << dendl;
-    << creq->get_tid() << ' ' << ceph_mds_op_name(creq->get_op()) << ' '
-    << creq->get_filepath() << dendl;
+  if (g_conf->adsl_mds_mon_debug_level_creq_mig_contention_client == 0) {
+    MClientRequest * creq = mdr->client_request;
+    utime_t start = creq->get_dispatch_stamp();
+    dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention_client)
+      << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION C "
+      << std::fixed << double(start) << ' ' << double(end - start) << ' '
+      << mdr->retry << ' '
+      //<< *creq << dendl;
+      << creq->get_tid() << ' ' << ceph_mds_op_name(creq->get_op()) << ' '
+      << creq->get_filepath() << dendl;
+  }
 }
 
 }; /* namespace: adsl */
