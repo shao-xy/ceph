@@ -161,6 +161,10 @@ std::vector<Option> get_global_options() {
     .set_description("ADSLab: MDS monitor log level for debugging contention between client requests and migration.")
     .set_default(30),
 
+    Option("adsl_mds_mon_debug_level_creq_mig_contention_client", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_description("ADSLab: MDS monitor log level for debugging contention between client requests and migration.")
+    .set_default(30),
+
     Option("adsl_mds_predictor_use_parent_fast", Option::TYPE_INT, Option::LEVEL_ADVANCED)
     .set_description("ADSLab: MDS predictor use load inherited from parent")
     .set_default(0),
