@@ -4589,6 +4589,7 @@ bool CInode::is_exportable(mds_rank_t dest) const
   if (pin == dest) {
     return true;
   } else if (pin >= 0) {
+    dout(0) << __func__ << " dest=" << dest << " pin=" << pin << dendl;
     return false;
   } else {
     return true;
