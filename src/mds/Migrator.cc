@@ -876,6 +876,7 @@ void Migrator::export_dir(CDir *dir, mds_rank_t dest)
   stat.tid = mdr->reqid.tid;
   stat.mut = mdr;
   stat.export_trace.final_state = stat.state;
+  stat.export_trace.lock_start = ceph_clock_now();
 
   return mds->mdcache->dispatch_request(mdr);
 }
@@ -954,6 +955,7 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
   assert(g_conf->mds_kill_export_at != 1);
   it->second.state = EXPORT_DISCOVERING;
   it->second.export_trace.final_state = it->second.state;
+  it->second.export_trace.discover_start = ceph_clock_now();
 
   // send ExportDirDiscover (ask target)
   filepath path;
@@ -1015,6 +1017,7 @@ void Migrator::handle_export_discover_ack(MExportDirDiscoverAck *m)
       // freeze the subtree
       it->second.state = EXPORT_FREEZING;
       it->second.export_trace.final_state = it->second.state;
+      it->second.export_trace.freeze_start = ceph_clock_now();
       dir->auth_unpin(this);
       assert(g_conf->mds_kill_export_at != 3);
 #ifdef ADSL_MDS_MIG_DEBUG
@@ -1409,6 +1412,7 @@ void Migrator::export_frozen_with_locks(CDir *dir, uint64_t tid, set<SimpleLock*
   // send.
   it->second.state = EXPORT_PREPPING;
   it->second.export_trace.final_state = it->second.state;
+  it->second.export_trace.prep_start = ceph_clock_now();
   mds->send_message_mds(prep, it->second.peer);
   assert (g_conf->mds_kill_export_at != 4);
 
@@ -1584,6 +1588,7 @@ void Migrator::handle_export_prep_ack(MExportDirPrepAck *m)
 
   it->second.state = EXPORT_WARNING;
   it->second.export_trace.final_state = it->second.state;
+  it->second.export_trace.warn_start = ceph_clock_now();
 
   assert(g_conf->mds_kill_export_at != 6);
   // nobody to warn?
@@ -1644,6 +1649,7 @@ void Migrator::export_go_synced(CDir *dir, uint64_t tid)
   
   it->second.state = EXPORT_EXPORTING;
   it->second.export_trace.final_state = it->second.state;
+  it->second.export_trace.export_start = ceph_clock_now();
   assert(g_conf->mds_kill_export_at != 7);
 
   assert(dir->is_frozen_tree_root());
@@ -1996,6 +2002,7 @@ void Migrator::handle_export_ack(MExportDirAck *m)
 
   it->second.state = EXPORT_LOGGINGFINISH;
   it->second.export_trace.final_state = it->second.state;
+  it->second.export_trace.loggingfinish_start = ceph_clock_now();
   assert (g_conf->mds_kill_export_at != 9);
   set<CDir*> bounds;
   cache->get_subtree_bounds(dir, bounds);
@@ -2166,6 +2173,7 @@ void Migrator::export_logged_finish(CDir *dir)
   // wait for notifyacks
   stat.state = EXPORT_NOTIFYING;
   stat.export_trace.final_state = stat.state;
+  stat.export_trace.notify_start = ceph_clock_now();
   assert (g_conf->mds_kill_export_at != 11);
   
   // no notifies to wait for?
@@ -2386,6 +2394,7 @@ void Migrator::handle_export_discover(MExportDirDiscover *m)
     p_state = &import_state[df];
     p_state->state = IMPORT_DISCOVERING;
     p_state->import_trace.final_state = p_state->state;
+    p_state->import_trace.discovering_start = ceph_clock_now();
     p_state->peer = from;
     p_state->tid = m->get_tid();
   } else {
@@ -2431,6 +2440,7 @@ void Migrator::handle_export_discover(MExportDirDiscover *m)
   
   p_state->state = IMPORT_DISCOVERED;
   p_state->import_trace.final_state = p_state->state;
+  p_state->import_trace.discovered_start = ceph_clock_now();
 
   // pin inode in the cache (for now)
   assert(in->is_dir());
@@ -2554,6 +2564,7 @@ void Migrator::handle_export_prep(MExportDirPrep *m)
     // change import state
     it->second.state = IMPORT_PREPPING;
     it->second.import_trace.final_state = it->second.state;
+    it->second.import_trace.prepping_start = ceph_clock_now();
     it->second.bound_ls = m->get_bounds();
     it->second.bystanders = m->get_bystanders();
     assert(g_conf->mds_kill_import_at != 3);
@@ -2682,6 +2693,7 @@ void Migrator::handle_export_prep(MExportDirPrep *m)
       // note new state
       it->second.state = IMPORT_PREPPED;
       it->second.import_trace.final_state = it->second.state;
+      it->second.import_trace.prepped_start = ceph_clock_now();
     } else {
       dout(7) << " couldn't acquire all needed locks, failing. " << *dir << dendl;
       success = false;
@@ -2801,6 +2813,7 @@ void Migrator::handle_export_dir(MExportDir *m)
   // note state
   it->second.state = IMPORT_LOGGINGSTART;
   it->second.import_trace.final_state = it->second.state;
+  it->second.import_trace.loggingstart_start = ceph_clock_now();
   assert (g_conf->mds_kill_import_at != 6);
 
   // log it
@@ -3094,6 +3107,7 @@ void Migrator::import_logged_start(dirfrag_t df, CDir *dir, mds_rank_t from,
   // note state
   it->second.state = IMPORT_ACKING;
   it->second.import_trace.final_state = it->second.state;
+  it->second.import_trace.ack_start = ceph_clock_now();
 
   assert (g_conf->mds_kill_import_at != 7);
 
@@ -3190,6 +3204,7 @@ void Migrator::import_finish(CDir *dir, bool notify, bool last)
     assert(it->second.state == IMPORT_ACKING);
     it->second.state = IMPORT_FINISHING;
     it->second.import_trace.final_state = it->second.state;
+    it->second.import_trace.finish_start = ceph_clock_now();
     return;
   }
 
