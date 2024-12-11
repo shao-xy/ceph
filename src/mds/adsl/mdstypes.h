@@ -289,8 +289,6 @@ struct import_timestamp_trace {
   utime_t loggingstart_start;
   utime_t ack_start;
   utime_t finish_start;
-  utime_t loggingfinish_start;
-  utime_t notify_start;
   int final_state;
 };
 

@@ -9,6 +9,7 @@
 #include "mds/MDSRank.h"
 #include "mds/Server.h"
 #include "mds/MDBalancer.h"
+#include "mds/Migrator.h"
 
 #include "adsl/dout_wrapper.h"
 
@@ -140,8 +141,8 @@ void MDSMonitor::record_migration(CDir * dir, utime_t start, utime_t end, bool i
 void MDSMonitor::record_export(CDir * dir, export_timestamp_trace &export_trace, utime_t finalize)
 {
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
-    << "ADSL_DEBUG_MIGRATION E " << export_trace.final_state
-    << std::fixed
+    << "ADSL_DEBUG_MIGRATION E " << Migrator::get_export_statename(export_trace.final_state)
+    << ' ' << std::fixed
     << double(export_trace.lock_start) << ' '
     << double(export_trace.discover_start) << ' '
     << double(export_trace.freeze_start) << ' '
@@ -150,15 +151,15 @@ void MDSMonitor::record_export(CDir * dir, export_timestamp_trace &export_trace,
     << double(export_trace.export_start) << ' '
     << double(export_trace.loggingfinish_start) << ' '
     << double(export_trace.notify_start) << ' '
-    << finalize << ' '
+    << double(finalize) << ' '
     << dir->dirfrag() << ' ' << dir->get_path() << dendl;
 }
 
 void MDSMonitor::record_import(CDir * dir, import_timestamp_trace &import_trace, utime_t finalize)
 {
   dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention)
-    << "ADSL_DEBUG_MIGRATION I " << import_trace.final_state
-    << std::fixed
+    << "ADSL_DEBUG_MIGRATION I " << Migrator::get_import_statename(import_trace.final_state)
+    << ' ' << std::fixed
     << double(import_trace.discovering_start) << ' '
     << double(import_trace.discovered_start) << ' '
     << double(import_trace.prepping_start) << ' '
@@ -166,9 +167,7 @@ void MDSMonitor::record_import(CDir * dir, import_timestamp_trace &import_trace,
     << double(import_trace.loggingstart_start) << ' '
     << double(import_trace.ack_start) << ' '
     << double(import_trace.finish_start) << ' '
-    << double(import_trace.loggingfinish_start) << ' '
-    << double(import_trace.notify_start) << ' '
-    << finalize << ' '
+    << double(finalize) << ' '
     << dir->dirfrag() << ' ' << dir->get_path() << dendl;
 }
 
