@@ -215,9 +215,16 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 			   CInode *auth_pin_freeze,
 			   bool auth_pin_nonblock)
 {
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+  utime_t lock_start = ceph_clock_now();
+#endif
   if (mdr->done_locking &&
       !mdr->is_slave()) {  // not on slaves!  master requests locks piecemeal.
     dout(10) << "acquire_locks " << *mdr << " - done locking" << dendl;    
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+    if (mdr->client_request)
+      mdr->dispatch_tracer.lock_end(lock_start, true);
+#endif
     return true;  // at least we had better be!
   }
   dout(10) << "acquire_locks " << *mdr << dendl;
@@ -264,6 +271,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	mds->locker->drop_locks(mdr.get(), NULL);
 	mdr->drop_local_auth_pins();
 	mds->wait_for_cluster_recovered(new C_MDS_RetryRequest(mdcache, mdr));
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+	if (mdr->client_request)
+	  mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
 	return false;
       }
     }
@@ -389,6 +400,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 #endif
 	object->add_waiter(MDSCacheObject::WAIT_SINGLEAUTH, new C_MDS_RetryRequest(mdcache, mdr));
 	mdr->drop_local_auth_pins();
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+	if (mdr->client_request)
+	  mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
 	return false;
       }
       mustpin_remote[object->authority().first].insert(object);
@@ -405,6 +420,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	dout(10) << " can't auth_pin (freezing?) " << *object << ", nonblocking" << dendl;
 #endif
 	mdr->aborted = true;
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+	if (mdr->client_request)
+	  mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
 	return false;
       }
 #ifdef ADSL_MDS_LOCKER_DEBUG
@@ -422,6 +441,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
       if (!mdr->remote_auth_pins.empty())
 	notify_freeze_waiter(object);
 
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+      if (mdr->client_request)
+	mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
       return false;
     }
   }
@@ -463,6 +486,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	dout(10) << " mds." << p->first << " is not active" << dendl;
 	if (mdr->more()->waiting_on_slave.empty())
 	  mds->wait_for_active_peer(p->first, new C_MDS_RetryRequest(mdcache, mdr));
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+	if (mdr->client_request)
+	  mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
 	return false;
       }
       
@@ -487,6 +514,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
       assert(mdr->more()->waiting_on_slave.count(p->first) == 0);
       mdr->more()->waiting_on_slave.insert(p->first);
     }
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+    if (mdr->client_request)
+      mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
     return false;
   }
 
@@ -614,6 +645,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	    dout(10) << " rejoin recovering " << **p << " " << *(*p)->get_parent()
 		     << ", waiting for cluster recovered" << dendl;
 	    marker.message = "rejoin recovering lock, waiting for cluster recovered";
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+	    if (mdr->client_request)
+	      mdr->dispatch_tracer.lock_end(lock_start, false);
+#endif
 	    return false;
 	  }
 	} else {
@@ -656,6 +691,10 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 
  out:
   issue_caps_set(issue_set);
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+  if (mdr->client_request)
+    mdr->dispatch_tracer.lock_end(lock_start, result);
+#endif
   return result;
 }
 

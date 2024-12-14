@@ -15,6 +15,8 @@
 #ifndef CEPH_MDS_MUTATION_H
 #define CEPH_MDS_MUTATION_H
 
+#define ADSL_CREQ_LOCKLAT_DEBUG
+
 #include "include/interval_set.h"
 #include "include/elist.h"
 #include "include/filepath.h"
@@ -25,6 +27,10 @@
 #include "Capability.h"
 
 #include "common/TrackedOp.h"
+
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+#include "messages/MClientRequest.h"
+#endif
 
 class LogSegment;
 class Capability;
@@ -303,7 +309,12 @@ struct MDRequestImpl : public MutationImpl {
     slave_request(NULL), internal_op(params.internal_op), internal_op_finish(NULL),
     internal_op_private(NULL),
     retry(0),
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+    waited_for_osdmap(false), _more(NULL),
+    dispatch_tracer(params.client_req->get_dispatch_stamp()) {
+#else
     waited_for_osdmap(false), _more(NULL) {
+#endif
     in[0] = in[1] = NULL;
     if (!params.throttled.is_zero())
       mark_event("throttled", params.throttled);
@@ -341,7 +352,75 @@ struct MDRequestImpl : public MutationImpl {
 protected:
   void _dump(Formatter *f) const override;
   void _dump_op_descriptor_unlocked(ostream& stream) const override;
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+public:
+  class DispatchPhaseTracer {
+    public:
+      struct DispatchPhase {
+	utime_t dispatch_start;
+	utime_t lock_start_offset;
+	utime_t lock_time;
+	bool lock_result;
+	utime_t dispatch_end_offset;
+	void print(ostream & os, utime_t &msgr_dispatch_time) const {
+	  os << '[' << std::fixed
+	     << double(dispatch_start - msgr_dispatch_time) << ','
+	     << double(lock_start_offset) << ','
+	     << double(lock_time) << ','
+	     << int(lock_result) << ','
+	     << double(dispatch_end_offset) << ','
+	     << ']';
+	}
+      };
+      utime_t &msgr_dispatch_time;
+      list<DispatchPhase*> _l;
+      DispatchPhase * current;
+      DispatchPhaseTracer(utime_t m)
+	: msgr_dispatch_time(m), current(NULL) {}
+      ~DispatchPhaseTracer() {
+	for (DispatchPhase* p_phase: _l) {
+	  delete p_phase;
+	}
+	if (current) {
+	  delete current;
+	}
+      }
+      void dispatch_start() {
+	assert(!current);
+	current = new DispatchPhase;
+	current->dispatch_start = ceph_clock_now();
+      }
+      void dispatch_end() {
+	assert(current);
+	current->dispatch_end_offset = ceph_clock_now() - current->dispatch_start;
+	_l.push_back(current);
+	current = NULL;
+      }
+      void lock_end(utime_t start, bool success) {
+	assert(current);
+	current->lock_start_offset = start - current->dispatch_start;
+	current->lock_time = ceph_clock_now() - start;
+	current->lock_result = success;
+      }
+      void print(ostream & os) {
+	os << std::fixed << double(msgr_dispatch_time);
+	if (current) {
+	  _l.push_back(current);
+	  current = NULL;
+	}
+	for (const DispatchPhase* p_phase: _l) {
+	  os << ' ';
+	  p_phase->print(os, msgr_dispatch_time);
+	}
+      }
+  };
+  DispatchPhaseTracer dispatch_tracer;
+#endif
 };
+inline ostream& operator<<(ostream& os, MDRequestImpl::DispatchPhaseTracer tracer) {
+  tracer.print(os);
+  return os;
+}
 
 typedef boost::intrusive_ptr<MDRequestImpl> MDRequestRef;
 

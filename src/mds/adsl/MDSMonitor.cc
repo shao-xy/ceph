@@ -175,10 +175,16 @@ void MDSMonitor::record_client_request(MDRequestRef & mdr, utime_t end)
 {
   if (g_conf->adsl_mds_mon_debug_level_creq_mig_contention_client == 0) {
     MClientRequest * creq = mdr->client_request;
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+    dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention_client)
+      << "ADSL_DEBUG_LOCKLAT C"
+      << mdr->dispatch_tracer << ' '
+#else
     utime_t start = creq->get_dispatch_stamp();
     dout(g_conf->adsl_mds_mon_debug_level_creq_mig_contention_client)
       << "ADSL_MDS_MON_DEBUG_CREQ_MIG_CONTENTION C "
       << std::fixed << double(start) << ' ' << double(end - start) << ' '
+#endif
       << mdr->retry << ' '
       //<< *creq << dendl;
       << creq->get_tid() << ' ' << ceph_mds_op_name(creq->get_op()) << ' '

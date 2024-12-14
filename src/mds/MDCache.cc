@@ -12021,7 +12021,16 @@ int MDCache::dump_cache(boost::string_view fn, Formatter *f,
 
 C_MDS_RetryRequest::C_MDS_RetryRequest(MDCache *c, MDRequestRef& r)
   : MDSInternalContext(c->mds), cache(c), mdr(r)
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+{
+  if (r->client_request) {
+    // if we are in construction, it means the current dispatch ends
+    r->dispatch_tracer.dispatch_end();
+  }
+}
+#else
 {}
+#endif
 
 void C_MDS_RetryRequest::finish(int r)
 {

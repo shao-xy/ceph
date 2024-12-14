@@ -1745,6 +1745,10 @@ void Server::dispatch_client_request(MDRequestRef& mdr)
     return;
   }
 
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+  mdr->dispatch_tracer.dispatch_start();
+#endif
+
   MClientRequest *req = mdr->client_request;
 
   if (logger) logger->inc(l_mdss_dispatch_client_request);
