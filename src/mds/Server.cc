@@ -1746,6 +1746,7 @@ void Server::dispatch_client_request(MDRequestRef& mdr)
   }
 
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
+  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " dispatch_start current=" << mdr->dispatch_tracer.current << dendl;
   mdr->dispatch_tracer.dispatch_start();
 #endif
 

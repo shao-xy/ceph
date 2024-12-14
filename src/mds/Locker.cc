@@ -216,6 +216,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 			   bool auth_pin_nonblock)
 {
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
+  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_start current=" << mdr->dispatch_tracer.current << dendl;
   utime_t lock_start = ceph_clock_now();
 #endif
   if (mdr->done_locking &&
