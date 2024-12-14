@@ -397,8 +397,12 @@ public:
 	current = NULL;
       }
       void lock_end(utime_t start, bool success) {
-	assert(current);
-	current->lock_start_offset = start - current->dispatch_start;
+	// assert(current);
+	if (!current) {
+	  current = new DispatchPhase;
+	} else {
+	  current->lock_start_offset = start - current->dispatch_start;
+	}
 	current->lock_time = ceph_clock_now() - start;
 	current->lock_result = success;
       }
