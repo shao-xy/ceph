@@ -386,12 +386,17 @@ public:
 	}
       }
       void dispatch_start() {
-	assert(!current);
+	if (current) {
+	  _l.push_back(current);
+	  current = NULL;
+	}
+	// assert(!current);
 	current = new DispatchPhase;
 	current->dispatch_start = ceph_clock_now();
       }
       void dispatch_end() {
-	assert(current);
+	if (!current)	return;
+	// assert(current);
 	current->dispatch_end_offset = ceph_clock_now() - current->dispatch_start;
 	_l.push_back(current);
 	current = NULL;
