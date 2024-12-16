@@ -309,12 +309,7 @@ struct MDRequestImpl : public MutationImpl {
     slave_request(NULL), internal_op(params.internal_op), internal_op_finish(NULL),
     internal_op_private(NULL),
     retry(0),
-#ifdef ADSL_CREQ_LOCKLAT_DEBUG
-    waited_for_osdmap(false), _more(NULL),
-    dispatch_tracer(params.client_req->get_dispatch_stamp()) {
-#else
     waited_for_osdmap(false), _more(NULL) {
-#endif
     in[0] = in[1] = NULL;
     if (!params.throttled.is_zero())
       mark_event("throttled", params.throttled);
@@ -322,6 +317,11 @@ struct MDRequestImpl : public MutationImpl {
       mark_event("all_read", params.all_read);
     if (!params.dispatched.is_zero())
       mark_event("dispatched", params.dispatched);
+#ifdef ADSL_CREQ_LOCKLAT_DEBUG
+    if (params.client_req)
+      dispatch_tracer.set_msgr_dispatch_stamp(std::move(params.client_req->get_dispatch_stamp()));
+#else
+#endif
   }
   ~MDRequestImpl() override;
   
@@ -372,11 +372,10 @@ public:
 	     << ']';
 	}
       };
-      utime_t &msgr_dispatch_time;
+      utime_t msgr_dispatch_time;
       list<DispatchPhase*> _l;
       DispatchPhase * current;
-      DispatchPhaseTracer(utime_t m)
-	: msgr_dispatch_time(m), current(NULL) {}
+      DispatchPhaseTracer() : current(NULL) {}
       ~DispatchPhaseTracer() {
 	for (DispatchPhase* p_phase: _l) {
 	  delete p_phase;
@@ -384,6 +383,9 @@ public:
 	if (current) {
 	  delete current;
 	}
+      }
+      void set_msgr_dispatch_stamp(const utime_t && m) {
+	msgr_dispatch_time = m;
       }
       void dispatch_start() {
 	if (current) {
