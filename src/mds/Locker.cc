@@ -216,7 +216,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 			   bool auth_pin_nonblock)
 {
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
-  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_start current=" << mdr->dispatch_tracer.current << dendl;
+  dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_start current=" << mdr->dispatch_tracer.current << dendl;
   utime_t lock_start = ceph_clock_now();
 #endif
   if (mdr->done_locking &&
@@ -224,7 +224,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
     dout(10) << "acquire_locks " << *mdr << " - done locking" << dendl;    
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
     if (mdr->client_request) {
-      dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+      dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
       mdr->dispatch_tracer.lock_end(lock_start, true);
     }
 #endif
@@ -276,7 +276,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	mds->wait_for_cluster_recovered(new C_MDS_RetryRequest(mdcache, mdr));
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
 	if (mdr->client_request) {
-	  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	  dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	  mdr->dispatch_tracer.lock_end(lock_start, false);
 	}
 #endif
@@ -407,7 +407,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	mdr->drop_local_auth_pins();
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
 	if (mdr->client_request) {
-	  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	  dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	  mdr->dispatch_tracer.lock_end(lock_start, false);
 	}
 #endif
@@ -429,7 +429,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	mdr->aborted = true;
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
 	if (mdr->client_request) {
-	  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	  dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	  mdr->dispatch_tracer.lock_end(lock_start, false);
 	}
 #endif
@@ -452,7 +452,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
       if (mdr->client_request) {
-	dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	mdr->dispatch_tracer.lock_end(lock_start, false);
       }
 #endif
@@ -499,7 +499,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	  mds->wait_for_active_peer(p->first, new C_MDS_RetryRequest(mdcache, mdr));
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
 	if (mdr->client_request) {
-	  dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	  dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	  mdr->dispatch_tracer.lock_end(lock_start, false);
 	}
 #endif
@@ -529,7 +529,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
     }
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
     if (mdr->client_request) {
-      dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+      dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
       mdr->dispatch_tracer.lock_end(lock_start, false);
     }
 #endif
@@ -662,7 +662,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
 	    marker.message = "rejoin recovering lock, waiting for cluster recovered";
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
 	    if (mdr->client_request) {
-	      dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+	      dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
 	      mdr->dispatch_tracer.lock_end(lock_start, false);
 	    }
 #endif
@@ -710,7 +710,7 @@ bool Locker::acquire_locks(MDRequestRef& mdr,
   issue_caps_set(issue_set);
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
   if (mdr->client_request) {
-    dout(0) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
+    dout(10) << "ADSL_CREQ_LOCKLAT_DEBUG request " << *mdr << " lock_end current=" << mdr->dispatch_tracer.current << dendl;
     mdr->dispatch_tracer.lock_end(lock_start, result);
   }
 #endif

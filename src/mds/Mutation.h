@@ -320,7 +320,6 @@ struct MDRequestImpl : public MutationImpl {
 #ifdef ADSL_CREQ_LOCKLAT_DEBUG
     if (params.client_req)
       dispatch_tracer.set_msgr_dispatch_stamp(std::move(params.client_req->get_dispatch_stamp()));
-#else
 #endif
   }
   ~MDRequestImpl() override;
