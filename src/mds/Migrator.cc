@@ -76,7 +76,7 @@
 #include "common/config.h"
 
 #include "adsl/dout_wrapper.h"
-//#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
+#define ADSL_MDS_MIG_DEBUG " ADSL_MDS_MIG_DEBUG "
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_mds_migrator
@@ -1172,6 +1172,21 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
   }
 
   if (!diri->filelock.can_wrlock(-1)) {
+#ifdef ADSL_MDS_MIG_DEBUG
+    {
+      SimpleLock & l = diri->filelock;
+      stringstream states_ss;
+      int state = l.get_state();
+      const struct sm_state_t * l_states;
+      while (state != LOCK_UNDEF) {
+	l_states = &(l.get_sm()->states[state]);
+	//ss << l.get_state_name(state) << '(' << l_states.can_wrlock == ANY << ',' << (l_states.can_wrlock == AUTH && diri->is_auth()) << ") ";
+	states_ss << l.get_state_name(state) << '(' << l_states->can_wrlock << ") ";
+	state = l_states->next;
+      }
+      dout(0) << ADSL_MDS_MIG_DEBUG << "diri->is_auth " << diri->is_auth() << " filelock " << l << states_ss.str() << dendl;
+    }
+#endif
     if (g_conf->adsl_mds_migmode == 2){
       //diri->filelock.add_waiter(SimpleLock::WAIT_WR|SimpleLock::WAIT_STABLE, new C_MDC_ExportWaitWrlock(this, dir, it->second.tid, rdlocks));
       //if (count == 0 || mds->get_nodeid() == 0) {

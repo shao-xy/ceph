@@ -106,7 +106,6 @@ int main(int argc, const char * argv[])
   
   bool ret = locker.acquire_locks(mdr, rdlocks, wrlocks, xlocks, NULL, NULL, true);
   dout(0) << " acquire_locks ret: " << ret << dendl;
-  
   dout(0) << "AFTER acquire_locks, filelock: " << focus << " can_wrlock: " << focus.can_wrlock(-1) << dendl;
 
   int state = focus.get_state();
@@ -115,7 +114,18 @@ int main(int argc, const char * argv[])
   dout(0) << "   sm can_wrlock=AUTH? " << (focus.get_sm()->states[state].can_wrlock == AUTH && inode.is_auth()) << dendl;
   dout(0) << "   num_wrlock = " << focus.more()->num_wrlock << dendl;
 
+  ret = locker.acquire_locks(mdr, rdlocks, wrlocks, xlocks, NULL, NULL, true);
+  dout(0) << " acquire_locks ret: " << ret << dendl;
+  dout(0) << "AFTER acquire_locks, filelock: " << focus << " can_wrlock: " << focus.can_wrlock(-1) << dendl;
+
+  state = focus.get_state();
+  dout(0) << "   state == " << focus.get_state_name(state) << dendl;
+  dout(0) << "   sm can_wrlock=ANY? " << (focus.get_sm()->states[state].can_wrlock == ANY) << dendl;
+  dout(0) << "   sm can_wrlock=AUTH? " << (focus.get_sm()->states[state].can_wrlock == AUTH && inode.is_auth()) << dendl;
+  dout(0) << "   num_wrlock = " << focus.more()->num_wrlock << dendl;
+
   focus.get_wrlock(true);
+  dout(0) << "AFTER get_wrlock, filelock: " << focus << " can_wrlock: " << focus.can_wrlock(-1) << dendl;
 
   // MutationRef mut = new MutationImpl();
   // dout(0) << "  mut: wrlocks size = " << mut->wrlocks.size() << dendl;
