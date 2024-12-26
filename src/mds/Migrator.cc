@@ -942,6 +942,23 @@ void Migrator::dispatch_export_dir(MDRequestRef& mdr, int count)
     return;
   }
 
+#ifdef ADSL_MDS_MIG_DEBUG
+  {
+    CInode * diri = dir->get_inode();
+    SimpleLock & l = diri->filelock;
+    stringstream states_ss;
+    int state = l.get_state();
+    const struct sm_state_t * l_states;
+    while (state != LOCK_UNDEF) {
+      l_states = &(l.get_sm()->states[state]);
+      //ss << l.get_state_name(state) << '(' << l_states.can_wrlock == ANY << ',' << (l_states.can_wrlock == AUTH && diri->is_auth()) << ") ";
+      states_ss << l.get_state_name(state) << '(' << int(l_states->can_wrlock) << ") ";
+      state = l_states->next;
+    }
+    dout(0) << ADSL_MDS_MIG_DEBUG << "after acquire_locks diri->is_auth " << diri->is_auth() << " filelock " << l << ' ' << states_ss.str() << dendl;
+  }
+#endif
+
   assert(g_conf->mds_kill_export_at != 1);
   it->second.state = EXPORT_DISCOVERING;
 
@@ -1181,10 +1198,10 @@ void Migrator::export_frozen(CDir *dir, uint64_t tid, int count)
       while (state != LOCK_UNDEF) {
 	l_states = &(l.get_sm()->states[state]);
 	//ss << l.get_state_name(state) << '(' << l_states.can_wrlock == ANY << ',' << (l_states.can_wrlock == AUTH && diri->is_auth()) << ") ";
-	states_ss << l.get_state_name(state) << '(' << l_states->can_wrlock << ") ";
+	states_ss << l.get_state_name(state) << '(' << int(l_states->can_wrlock) << ") ";
 	state = l_states->next;
       }
-      dout(0) << ADSL_MDS_MIG_DEBUG << "diri->is_auth " << diri->is_auth() << " filelock " << l << states_ss.str() << dendl;
+      dout(0) << ADSL_MDS_MIG_DEBUG << "can't wrlock: diri->is_auth " << diri->is_auth() << " filelock " << l << ' ' << states_ss.str() << dendl;
     }
 #endif
     if (g_conf->adsl_mds_migmode == 2){
